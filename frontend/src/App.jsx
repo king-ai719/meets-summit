@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react'
 import JobClassPage from './pages/JobClassPage'
 import ProfilePage from './pages/ProfilePage'
+import GuildListPage from './pages/GuildListPage'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
             <SignedOut><RedirectToSignIn /></SignedOut>
           </>
         } />
+        <Route path="/guilds" element={<GuildListPage />} />
       </Routes>
     </BrowserRouter>
   )

@@ -32,12 +32,34 @@ export default function ProfilePage() {
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(true)
 
+  // 職業クラス取得
   useEffect(() => {
     fetch(`${API}/api/job-classes`)
       .then(res => res.json())
       .then(data => setJobClasses(data.data))
   }, [])
+
+  // 既存プロフィール取得してフォームにセット
+  useEffect(() => {
+    if (!user) return
+    fetch(`${API}/api/users?clerk_id=${user.id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.data && data.data.length > 0) {
+          const u = data.data[0]
+          setForm({
+            username: u.username || '',
+            bio: u.bio || '',
+            job_class_id: u.job_class_id || null,
+            job_rank: u.job_rank || null,
+            gender: u.gender || '',
+          })
+        }
+        setLoading(false)
+      })
+  }, [user])
 
   const handleSave = async () => {
     if (!form.username) return alert('冒険者名を入力してください')
@@ -70,6 +92,12 @@ export default function ProfilePage() {
     genderBtn: (selected) => ({ flex: 1, cursor: 'pointer', border: `1px solid ${selected ? '#B4965A' : '#2a2a3e'}`, borderRadius: '8px', padding: '10px', textAlign: 'center', background: selected ? '#1a160a' : '#1a1a2e', color: selected ? '#B4965A' : 'white', fontSize: '13px', transition: 'all .2s' }),
     saveBtn: { width: '100%', padding: '14px', border: '1px solid #B4965A', borderRadius: '10px', background: 'transparent', color: '#B4965A', fontSize: '15px', letterSpacing: '2px', cursor: 'pointer', marginTop: '0.5rem', transition: 'all .2s' },
   }
+
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+      読み込み中...
+    </div>
+  )
 
   return (
     <div style={s.page}>
