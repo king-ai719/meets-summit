@@ -3,6 +3,7 @@ import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react'
 import JobClassPage from './pages/JobClassPage'
 import ProfilePage from './pages/ProfilePage'
 import GuildListPage from './pages/GuildListPage'
+import GuildCreatePage from './pages/GuildCreatePage'
 
 function App() {
   return (
@@ -16,6 +17,12 @@ function App() {
           </>
         } />
         <Route path="/guilds" element={<GuildListPage />} />
+        <Route path="/guilds/create" element={
+          <>
+            <SignedIn><GuildCreatePage /></SignedIn>
+            <SignedOut><RedirectToSignIn /></SignedOut>
+          </>
+        } />
       </Routes>
     </BrowserRouter>
   )

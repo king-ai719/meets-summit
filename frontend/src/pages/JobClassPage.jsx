@@ -4,10 +4,17 @@ import { useNavigate } from 'react-router-dom'
 
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
-function Avatar({ seed, size = 60 }) {
+function Avatar({ seed, size = 60, badge = null }) {
   const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
   return (
-    <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea' }} />
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea', display: 'block' }} />
+      {badge && (
+        <div style={{ position: 'absolute', top: -8, right: -8, fontSize: '1.2rem', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.8))' }}>
+          {badge}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -32,9 +39,7 @@ export default function JobClassPage() {
     fetch(`${API}/api/users?clerk_id=${user.id}`)
       .then(res => res.json())
       .then(data => {
-        if (data.data && data.data.length > 0) {
-          setProfile(data.data[0])
-        }
+        if (data.data && data.data.length > 0) setProfile(data.data[0])
       })
   }, [user])
 
@@ -43,8 +48,14 @@ export default function JobClassPage() {
     const job = jobClasses.find(j => j.id === profile.job_class_id)
     if (!job) return '冒険者'
     const rank = RANK_LABELS[profile.job_rank] || ''
-    if (profile.job_rank === 'hito') return `${job.rp_prefix}${rank}`
     return `${job.rp_prefix}${rank}`
+  }
+
+  const getBadge = () => {
+    if (!profile) return null
+    if (profile.user_type === 'guild_master') return '🏰'
+    if (profile.user_type === 'premium') return '👑'
+    return null
   }
 
   return (
@@ -64,7 +75,7 @@ export default function JobClassPage() {
         </SignedOut>
         <SignedIn>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem' }}>
-            <Avatar seed={user?.id || 'default'} size={60} />
+            <Avatar seed={user?.id || 'default'} size={60} badge={getBadge()} />
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontWeight: 'bold' }}>{profile?.username || user?.firstName || '冒険者'}</div>
               <div style={{ fontSize: '0.85rem', color: '#B4965A' }}>{getTitle()}</div>
@@ -72,6 +83,9 @@ export default function JobClassPage() {
             <UserButton />
             <button onClick={() => navigate('/profile')} style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '8px', cursor: 'pointer' }}>
               プロフィール設定
+            </button>
+            <button onClick={() => navigate('/guilds')} style={{ background: 'linear-gradient(135deg, #764ba2, #667eea)', color: 'white', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '8px', cursor: 'pointer' }}>
+              🏰 ギルド
             </button>
           </div>
         </SignedIn>

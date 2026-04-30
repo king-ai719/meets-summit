@@ -34,14 +34,12 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // 職業クラス取得
   useEffect(() => {
     fetch(`${API}/api/job-classes`)
       .then(res => res.json())
       .then(data => setJobClasses(data.data))
   }, [])
 
-  // 既存プロフィール取得してフォームにセット
   useEffect(() => {
     if (!user) return
     fetch(`${API}/api/users?clerk_id=${user.id}`)
@@ -70,7 +68,7 @@ export default function ProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, clerk_id: user.id, email: user.primaryEmailAddress?.emailAddress }),
       })
-      if (res.ok) { setSaved(true); setTimeout(() => navigate('/'), 1500) }
+      if (res.ok) { setSaved(true); setTimeout(() => navigate('/guilds'), 1500) }
       else alert('保存に失敗しました')
     } catch { alert('通信エラー') }
     finally { setSaving(false) }
