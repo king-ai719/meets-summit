@@ -1,12 +1,25 @@
 import { useState, useEffect } from 'react'
-import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/clerk-react'
+import { SignInButton, SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
 
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
+function Avatar({ seed, size = 60 }) {
+  const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
+  return (
+    <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea' }} />
+  )
+}
+
+const RANK_LABELS = {
+  kou: '皇', ou: '王', shou: '将', shi: '士', hito: 'の人'
+}
+
 export default function JobClassPage() {
   const [jobClasses, setJobClasses] = useState([])
+  const [profile, setProfile] = useState(null)
   const navigate = useNavigate()
+  const { user } = useUser()
 
   useEffect(() => {
     fetch(`${API}/api/job-classes`)
@@ -14,12 +27,32 @@ export default function JobClassPage() {
       .then(data => setJobClasses(data.data))
   }, [])
 
+  useEffect(() => {
+    if (!user) return
+    fetch(`${API}/api/users?clerk_id=${user.id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.data && data.data.length > 0) {
+          setProfile(data.data[0])
+        }
+      })
+  }, [user])
+
+  const getTitle = () => {
+    if (!profile || !profile.job_class_id || !profile.job_rank) return '冒険者'
+    const job = jobClasses.find(j => j.id === profile.job_class_id)
+    if (!job) return '冒険者'
+    const rank = RANK_LABELS[profile.job_rank] || ''
+    if (profile.job_rank === 'hito') return `${job.rp_prefix}${rank}`
+    return `${job.rp_prefix}${rank}`
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' }}>
       <h1 style={{ textAlign: 'center', fontSize: '3rem', background: 'linear-gradient(135deg, #667eea, #764ba2)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-        ⚔️ Meets Summit - ミーツサミット ⚔️
+        Meets Summit - ミーツサミット
       </h1>
-      <p style={{ textAlign: 'center', color: '#888', marginBottom: '3rem' }}>RPG × マッチング</p>
+      <p style={{ textAlign: 'center', color: '#888', marginBottom: '2rem' }}>RPG × マッチング</p>
 
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <SignedOut>
@@ -31,6 +64,11 @@ export default function JobClassPage() {
         </SignedOut>
         <SignedIn>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem' }}>
+            <Avatar seed={user?.id || 'default'} size={60} />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontWeight: 'bold' }}>{profile?.username || user?.firstName || '冒険者'}</div>
+              <div style={{ fontSize: '0.85rem', color: '#B4965A' }}>{getTitle()}</div>
+            </div>
             <UserButton />
             <button onClick={() => navigate('/profile')} style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', padding: '0.6rem 1.5rem', borderRadius: '8px', cursor: 'pointer' }}>
               プロフィール設定
