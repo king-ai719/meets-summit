@@ -4,6 +4,7 @@ import JobClassPage from './pages/JobClassPage'
 import ProfilePage from './pages/ProfilePage'
 import GuildListPage from './pages/GuildListPage'
 import GuildCreatePage from './pages/GuildCreatePage'
+import GuildDetailPage from './pages/GuildDetailPage'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <SignedOut><RedirectToSignIn /></SignedOut>
           </>
         } />
+        <Route path="/guilds/:id" element={<GuildDetailPage />} />
       </Routes>
     </BrowserRouter>
   )

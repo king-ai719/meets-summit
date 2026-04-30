@@ -52,12 +52,16 @@ export default function GuildCreatePage() {
       const res = await fetch(`${API}/api/guilds`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, owner_id: profile.id }),
+        body: JSON.stringify({
+          ...form,
+          owner_id: profile.id,
+          job_class_id: form.job_class_id || null,
+        }),
       })
       const data = await res.json()
       if (data.success) navigate('/guilds')
-      else alert('作成に失敗しました')
-    } catch { alert('通信エラー') }
+      else alert('作成に失敗しました：' + JSON.stringify(data))
+    } catch(e) { alert('通信エラー：' + e.message) }
     finally { setSaving(false) }
   }
 

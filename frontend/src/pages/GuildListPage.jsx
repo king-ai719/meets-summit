@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react'
+import { SignedIn } from '@clerk/clerk-react'
 
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
@@ -35,7 +35,9 @@ export default function GuildListPage() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
             {guilds.map(guild => (
-              <div key={guild.id} style={{ background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '12px', padding: '1.5rem', cursor: 'pointer', transition: 'all .2s' }}
+              <div key={guild.id}
+                onClick={() => navigate(`/guilds/${guild.id}`)}
+                style={{ background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '12px', padding: '1.5rem', cursor: 'pointer', transition: 'all .2s' }}
                 onMouseOver={e => e.currentTarget.style.borderColor = '#B4965A'}
                 onMouseOut={e => e.currentTarget.style.borderColor = '#2a2a3e'}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{guild.icon || '⚔️'}</div>
