@@ -32,7 +32,7 @@ export default function GuildDetailPage() {
   useEffect(() => {
     fetch(`${API}/api/guilds/${id}/members`)
       .then(res => res.json())
-      .then(data => setMembers(data.data || []))
+      .then(data => setMembers(Array.isArray(data.data) ? data.data : []))
   }, [id])
 
   useEffect(() => {
@@ -40,9 +40,7 @@ export default function GuildDetailPage() {
     fetch(`${API}/api/users?clerk_id=${user.id}`)
       .then(res => res.json())
       .then(data => {
-        if (data.data && data.data.length > 0) {
-          setProfile(data.data[0])
-        }
+        if (data.data && data.data.length > 0) setProfile(data.data[0])
       })
   }, [user])
 
