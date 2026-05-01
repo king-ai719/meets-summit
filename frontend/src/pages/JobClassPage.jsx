@@ -25,6 +25,7 @@ const RANK_LABELS = {
 export default function JobClassPage() {
   const [jobClasses, setJobClasses] = useState([])
   const [profile, setProfile] = useState(null)
+  const [myGuilds, setMyGuilds] = useState([])
   const navigate = useNavigate()
   const { user } = useUser()
 
@@ -42,6 +43,13 @@ export default function JobClassPage() {
         if (data.data && data.data.length > 0) setProfile(data.data[0])
       })
   }, [user])
+
+  useEffect(() => {
+    if (!profile) return
+    fetch(`${API}/api/my-guilds?user_id=${profile.id}`)
+      .then(res => res.json())
+      .then(data => setMyGuilds(Array.isArray(data.data) ? data.data : []))
+  }, [profile])
 
   const getTitle = () => {
     if (!profile || !profile.job_class_id || !profile.job_rank) return '冒険者'
@@ -74,7 +82,7 @@ export default function JobClassPage() {
           </SignInButton>
         </SignedOut>
         <SignedIn>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <Avatar seed={user?.id || 'default'} size={60} badge={getBadge()} />
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontWeight: 'bold' }}>{profile?.username || user?.firstName || '冒険者'}</div>
@@ -88,6 +96,24 @@ export default function JobClassPage() {
               🏰 ギルド
             </button>
           </div>
+
+          {myGuilds.length > 0 && (
+            <div style={{ maxWidth: '900px', margin: '1.5rem auto 0', textAlign: 'left' }}>
+              <p style={{ fontSize: '0.75rem', letterSpacing: '2px', color: '#888', marginBottom: '8px' }}>参加中のギルド</p>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {myGuilds.map((m, i) => (
+                  <div key={i} onClick={() => navigate(`/guilds/${m.guild_id}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', transition: 'all .2s' }}
+                    onMouseOver={e => e.currentTarget.style.borderColor = '#B4965A'}
+                    onMouseOut={e => e.currentTarget.style.borderColor = '#2a2a3e'}>
+                    <span style={{ fontSize: '1.2rem' }}>{m.guilds?.icon || '⚔️'}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 500 }}>{m.guilds?.name || 'ギルド'}</span>
+                    <span style={{ fontSize: '11px', color: '#888' }}>👥{m.guilds?.member_limit}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </SignedIn>
       </div>
 

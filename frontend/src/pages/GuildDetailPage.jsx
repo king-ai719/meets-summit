@@ -17,7 +17,9 @@ export default function GuildDetailPage() {
   const [members, setMembers] = useState([])
   const [profile, setProfile] = useState(null)
   const [isMember, setIsMember] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
   const [joining, setJoining] = useState(false)
+  const [leaving, setLeaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -45,9 +47,10 @@ export default function GuildDetailPage() {
   }, [user])
 
   useEffect(() => {
-    if (!profile || members.length === 0) return
+    if (!profile || !guild) return
     setIsMember(members.some(m => m.user_id === profile.id))
-  }, [profile, members])
+    setIsOwner(guild.owner_id === profile.id)
+  }, [profile, members, guild])
 
   const handleJoin = async () => {
     if (!profile) return alert('先にプロフィールを設定してください')
@@ -65,6 +68,24 @@ export default function GuildDetailPage() {
       } else alert('参加に失敗しました')
     } catch { alert('通信エラー') }
     finally { setJoining(false) }
+  }
+
+  const handleLeave = async () => {
+    if (!window.confirm('このギルドから脱退しますか？')) return
+    setLeaving(true)
+    try {
+      const res = await fetch(`${API}/api/guild-members/leave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guild_id: id, user_id: profile.id }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setIsMember(false)
+        setMembers(prev => prev.filter(m => m.user_id !== profile.id))
+      } else alert('脱退に失敗しました')
+    } catch { alert('通信エラー') }
+    finally { setLeaving(false) }
   }
 
   const s = {
@@ -106,12 +127,27 @@ export default function GuildDetailPage() {
               {guild.guild_type === 'love' ? '❤️ 恋愛' : guild.guild_type === 'work' ? '💼 仕事' : guild.guild_type === 'hobby' ? '🎮 趣味' : '🌙 夜職'}
             </span>
           )}
+          {isOwner && (
+            <span style={{ background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '4px 12px', fontSize: '12px', color: '#B4965A' }}>
+              🏰 ギルドマスター
+            </span>
+          )}
         </div>
 
         {user && (
           isMember ? (
-            <div style={{ background: '#0f1a0f', border: '1px solid #1a4a1a', borderRadius: '10px', padding: '12px', textAlign: 'center', color: '#4CAF50', marginBottom: '1.5rem' }}>
-              ✅ このギルドに参加済み
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '1.5rem' }}>
+              <div style={{ background: '#0f1a0f', border: '1px solid #1a4a1a', borderRadius: '10px', padding: '12px', textAlign: 'center', color: '#4CAF50' }}>
+                ✅ このギルドに参加済み
+              </div>
+              {!isOwner && (
+                <button onClick={handleLeave} disabled={leaving}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #4a1a1a', borderRadius: '10px', background: 'transparent', color: '#888', fontSize: '13px', cursor: 'pointer', transition: 'all .2s' }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = '#cc3333'; e.currentTarget.style.color = '#cc3333' }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = '#4a1a1a'; e.currentTarget.style.color = '#888' }}>
+                  {leaving ? '脱退中...' : 'Leave — ギルドを脱退する'}
+                </button>
+              )}
             </div>
           ) : (
             <button onClick={handleJoin} disabled={joining} style={{ width: '100%', padding: '14px', border: '1px solid #B4965A', borderRadius: '10px', background: 'transparent', color: '#B4965A', fontSize: '15px', letterSpacing: '2px', cursor: 'pointer', marginBottom: '1.5rem', transition: 'all .2s' }}
