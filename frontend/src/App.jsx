@@ -5,6 +5,7 @@ import ProfilePage from './pages/ProfilePage'
 import GuildListPage from './pages/GuildListPage'
 import GuildCreatePage from './pages/GuildCreatePage'
 import GuildDetailPage from './pages/GuildDetailPage'
+import QuestPage from './pages/QuestPage'
 
 function App() {
   return (
@@ -25,6 +26,12 @@ function App() {
           </>
         } />
         <Route path="/guilds/:id" element={<GuildDetailPage />} />
+        <Route path="/quests/:quest_id" element={
+          <>
+            <SignedIn><QuestPage /></SignedIn>
+            <SignedOut><RedirectToSignIn /></SignedOut>
+          </>
+        } />
       </Routes>
     </BrowserRouter>
   )

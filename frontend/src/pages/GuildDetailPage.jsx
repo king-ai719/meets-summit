@@ -16,6 +16,7 @@ export default function GuildDetailPage() {
   const [guild, setGuild] = useState(null)
   const [members, setMembers] = useState([])
   const [profile, setProfile] = useState(null)
+  const [quests, setQuests] = useState([])
   const [isMember, setIsMember] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
   const [joining, setJoining] = useState(false)
@@ -26,10 +27,7 @@ export default function GuildDetailPage() {
   useEffect(() => {
     fetch(`${API}/api/guilds/${id}`)
       .then(res => res.json())
-      .then(data => {
-        setGuild(data.data)
-        setLoading(false)
-      })
+      .then(data => { setGuild(data.data); setLoading(false) })
   }, [id])
 
   useEffect(() => {
@@ -39,12 +37,16 @@ export default function GuildDetailPage() {
   }, [id])
 
   useEffect(() => {
+    fetch(`${API}/api/quests?guild_id=${id}`)
+      .then(res => res.json())
+      .then(data => setQuests(Array.isArray(data.data) ? data.data : []))
+  }, [id])
+
+  useEffect(() => {
     if (!user) return
     fetch(`${API}/api/users?clerk_id=${user.id}`)
       .then(res => res.json())
-      .then(data => {
-        if (data.data && data.data.length > 0) setProfile(data.data[0])
-      })
+      .then(data => { if (data.data?.[0]) setProfile(data.data[0]) })
   }, [user])
 
   useEffect(() => {
@@ -90,7 +92,6 @@ export default function GuildDetailPage() {
   }
 
   const handleDissolve = async () => {
-    console.log('dissolve called', isOwner, profile?.id, guild?.owner_id)
     if (!window.confirm('本当にギルドを解散しますか？この操作は取り消せません。')) return
     setDissolving(true)
     try {
@@ -100,12 +101,16 @@ export default function GuildDetailPage() {
         body: JSON.stringify({ owner_id: profile.id }),
       })
       const data = await res.json()
-      console.log('dissolve response', data)
-      if (data.success) {
-        window.location.href = '/'
-      } else alert('解散に失敗しました：' + data.error)
+      if (data.success) { window.location.href = '/' }
+      else alert('解散に失敗しました：' + data.error)
     } catch { alert('通信エラー') }
     finally { setDissolving(false) }
+  }
+
+  const difficultyLabel = (d) => {
+    if (d === 'normal') return { label: 'NORMAL', color: '#4CAF50' }
+    if (d === 'hard') return { label: 'HARD', color: '#FF9800' }
+    return { label: 'VERY HARD', color: '#cc3333' }
   }
 
   const s = {
@@ -138,7 +143,7 @@ export default function GuildDetailPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           <span style={{ background: '#1a1a2e', border: '1px solid #333', borderRadius: '99px', padding: '4px 12px', fontSize: '12px', color: '#888' }}>
             👥 {members.length}人
           </span>
@@ -184,6 +189,36 @@ export default function GuildDetailPage() {
               {joining ? '参加中...' : 'Join — このギルドに参加する'}
             </button>
           )
+        )}
+
+        <div style={s.divider} />
+
+        <h2 style={{ fontSize: '1rem', letterSpacing: '2px', color: '#888', marginBottom: '1rem' }}>QUESTS</h2>
+        {quests.length === 0 ? (
+          <p style={{ color: '#666', textAlign: 'center', marginBottom: '1rem' }}>クエストがありません</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '1.5rem' }}>
+            {quests.map(quest => {
+              const diff = difficultyLabel(quest.difficulty)
+              return (
+                <div key={quest.id} style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: '10px', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 500, marginBottom: '4px' }}>{quest.title}</div>
+                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: '#0f0f1a', color: diff.color, border: `1px solid ${diff.color}` }}>
+                      {diff.label}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#888', marginLeft: '8px' }}>⏱ {quest.time_limit}s</span>
+                  </div>
+                  {isMember && (
+                    <button onClick={() => navigate(`/quests/${quest.id}`)}
+                      style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                      挑戦する
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         )}
 
         <div style={s.divider} />
