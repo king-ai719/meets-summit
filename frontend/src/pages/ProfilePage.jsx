@@ -101,6 +101,7 @@ export default function ProfilePage() {
 
   const currentTitle = getCurrentTitle()
   const titles = profile?.titles || []
+  const badges = profile?.badges || []
 
   const s = {
     page: { minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' },
@@ -192,6 +193,39 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+
+        {/* 証明バッジ一覧 */}
+        {badges.length > 0 && (
+          <>
+            <div style={s.divider} />
+            <div style={s.field}>
+              <label style={s.label}>🎖️ スキル証明バッジ / Badges</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {badges.map((b, i) => (
+                  <div key={i} style={{
+                    background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22',
+                    border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`,
+                    borderRadius: '10px',
+                    padding: '8px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}>
+                    <span style={{ fontSize: '16px' }}>{b.icon}</span>
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: RARITY_COLOR[b.rarity] || '#4CAF50' }}>
+                        {b.label}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#666' }}>
+                        Rarity {b.rarity}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* 獲得称号一覧 */}
         {titles.length > 0 && (
