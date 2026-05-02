@@ -9,9 +9,9 @@ export default function GuildListPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    fetch(`${API}/api/guilds`)
+    fetch(`${API}/api/guilds?t=${Date.now()}`)
       .then(res => res.json())
-      .then(data => setGuilds(data.data || []))
+      .then(data => setGuilds(Array.isArray(data.data) ? data.data : []))
   }, [])
 
   return (

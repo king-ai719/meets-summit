@@ -37,7 +37,7 @@ export default function ProfilePage() {
   useEffect(() => {
     fetch(`${API}/api/job-classes`)
       .then(res => res.json())
-      .then(data => setJobClasses(data.data))
+      .then(data => setJobClasses(Array.isArray(data.data) ? data.data : []))
   }, [])
 
   useEffect(() => {

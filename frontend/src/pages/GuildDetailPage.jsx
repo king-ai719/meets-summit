@@ -20,6 +20,7 @@ export default function GuildDetailPage() {
   const [isOwner, setIsOwner] = useState(false)
   const [joining, setJoining] = useState(false)
   const [leaving, setLeaving] = useState(false)
+  const [dissolving, setDissolving] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -88,6 +89,25 @@ export default function GuildDetailPage() {
     finally { setLeaving(false) }
   }
 
+  const handleDissolve = async () => {
+    console.log('dissolve called', isOwner, profile?.id, guild?.owner_id)
+    if (!window.confirm('本当にギルドを解散しますか？この操作は取り消せません。')) return
+    setDissolving(true)
+    try {
+      const res = await fetch(`${API}/api/guilds/${id}/dissolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner_id: profile.id }),
+      })
+      const data = await res.json()
+      console.log('dissolve response', data)
+      if (data.success) {
+        window.location.href = '/'
+      } else alert('解散に失敗しました：' + data.error)
+    } catch { alert('通信エラー') }
+    finally { setDissolving(false) }
+  }
+
   const s = {
     page: { minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' },
     card: { maxWidth: '700px', margin: '0 auto', background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '16px', padding: '2rem' },
@@ -146,6 +166,14 @@ export default function GuildDetailPage() {
                   onMouseOver={e => { e.currentTarget.style.borderColor = '#cc3333'; e.currentTarget.style.color = '#cc3333' }}
                   onMouseOut={e => { e.currentTarget.style.borderColor = '#4a1a1a'; e.currentTarget.style.color = '#888' }}>
                   {leaving ? '脱退中...' : 'Leave — ギルドを脱退する'}
+                </button>
+              )}
+              {isOwner && (
+                <button onClick={handleDissolve} disabled={dissolving}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #4a1a1a', borderRadius: '10px', background: 'transparent', color: '#888', fontSize: '13px', cursor: 'pointer', transition: 'all .2s' }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = '#cc3333'; e.currentTarget.style.color = '#cc3333' }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = '#4a1a1a'; e.currentTarget.style.color = '#888' }}>
+                  {dissolving ? '解散中...' : 'Dissolve — ギルドを解散する'}
                 </button>
               )}
             </div>
