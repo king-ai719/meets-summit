@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SignedIn } from '@clerk/clerk-react'
+import { useUser } from '@clerk/clerk-react'
 
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
 export default function GuildListPage() {
   const [guilds, setGuilds] = useState([])
+  const [profile, setProfile] = useState(null)
   const navigate = useNavigate()
+  const { user } = useUser()
 
   useEffect(() => {
     fetch(`${API}/api/guilds?t=${Date.now()}`)
@@ -14,17 +16,29 @@ export default function GuildListPage() {
       .then(data => setGuilds(Array.isArray(data.data) ? data.data : []))
   }, [])
 
+  useEffect(() => {
+    if (!user) return
+    fetch(`${API}/api/users?clerk_id=${user.id}`)
+      .then(res => res.json())
+      .then(data => { if (data.data?.[0]) setProfile(data.data[0]) })
+  }, [user])
+
+  const isAdmin = profile?.user_type === 'guild_master'
+
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem' }}>←</button>
           <h1 style={{ fontSize: '1.8rem', letterSpacing: '2px' }}>⚔️ ギルド一覧</h1>
-          <SignedIn>
-            <button onClick={() => navigate('/guilds/create')} style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'pointer' }}>
+          {isAdmin ? (
+            <button onClick={() => navigate('/guilds/create')}
+              style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'pointer' }}>
               ＋ ギルド作成
             </button>
-          </SignedIn>
+          ) : (
+            <div style={{ width: '80px' }} />
+          )}
         </div>
 
         {guilds.length === 0 ? (

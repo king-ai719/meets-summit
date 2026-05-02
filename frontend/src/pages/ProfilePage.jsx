@@ -18,11 +18,27 @@ const GENDERS = [
   { value: 'secret', label: '秘密' },
 ]
 
+const RARITY_COLOR = {
+  S: '#ff4444',
+  A: '#ff9900',
+  B: '#667eea',
+  C: '#4CAF50',
+}
+
+const RANK_MAP = {
+  hito: 'の人', shi: '士', shou: '将', ou: '王', kou: '皇'
+}
+
+const NIGHT_WOM_MAP = {
+  hito: '夜の人', shi: '夜士女', shou: '夜将姫', ou: '夜王妃', kou: '夜皇姫'
+}
+
 export default function ProfilePage() {
   const { user } = useUser()
   const navigate = useNavigate()
 
   const [jobClasses, setJobClasses] = useState([])
+  const [profile, setProfile] = useState(null)
   const [form, setForm] = useState({
     username: '',
     bio: '',
@@ -47,6 +63,7 @@ export default function ProfilePage() {
       .then(data => {
         if (data.data && data.data.length > 0) {
           const u = data.data[0]
+          setProfile(u)
           setForm({
             username: u.username || '',
             bio: u.bio || '',
@@ -58,6 +75,14 @@ export default function ProfilePage() {
         setLoading(false)
       })
   }, [user])
+
+  const getCurrentTitle = () => {
+    if (!form.job_class_id || !form.job_rank) return null
+    const job = jobClasses.find(j => j.id === form.job_class_id)
+    if (!job) return null
+    if (job.category === 'night_wom') return NIGHT_WOM_MAP[form.job_rank] || null
+    return `${job.rp_prefix}${RANK_MAP[form.job_rank] || ''}`
+  }
 
   const handleSave = async () => {
     if (!form.username) return alert('冒険者名を入力してください')
@@ -73,6 +98,9 @@ export default function ProfilePage() {
     } catch { alert('通信エラー') }
     finally { setSaving(false) }
   }
+
+  const currentTitle = getCurrentTitle()
+  const titles = profile?.titles || []
 
   const s = {
     page: { minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' },
@@ -107,6 +135,14 @@ export default function ProfilePage() {
             <p style={{ color: '#666', fontSize: '12px', letterSpacing: '3px' }}>冒険者の証明</p>
           </div>
         </div>
+
+        {/* 現在の称号プレビュー */}
+        {currentTitle && (
+          <div style={{ background: '#1a160a', border: '1px solid #B4965A33', borderRadius: '10px', padding: '12px 16px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '12px', color: '#888' }}>現在の称号</span>
+            <span style={{ fontSize: '16px', fontWeight: 600, color: '#B4965A' }}>{currentTitle}</span>
+          </div>
+        )}
 
         <div style={s.field}>
           <label style={s.label}>冒険者名 / Username</label>
@@ -156,6 +192,36 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+
+        {/* 獲得称号一覧 */}
+        {titles.length > 0 && (
+          <>
+            <div style={s.divider} />
+            <div style={s.field}>
+              <label style={s.label}>🏆 獲得称号 / Titles</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {titles.map((t, i) => (
+                  <div key={i} style={{
+                    background: (RARITY_COLOR[t.rarity] || '#4CAF50') + '22',
+                    border: `1px solid ${RARITY_COLOR[t.rarity] || '#4CAF50'}`,
+                    borderRadius: '99px',
+                    padding: '4px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: RARITY_COLOR[t.rarity] || '#4CAF50' }}>
+                      {t.value}
+                    </span>
+                    <span style={{ fontSize: '10px', color: RARITY_COLOR[t.rarity] || '#4CAF50', opacity: 0.8 }}>
+                      {t.rarity}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         <button style={s.saveBtn} onClick={handleSave} disabled={saving}
           onMouseOver={e => { e.currentTarget.style.background = '#B4965A'; e.currentTarget.style.color = '#0a0a0f' }}

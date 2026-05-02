@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react'
 import JobClassPage from './pages/JobClassPage'
+import JobClassDetailPage from './pages/JobClassDetailPage'
+import GuestQuestPage from './pages/GuestQuestPage'
 import ProfilePage from './pages/ProfilePage'
 import GuildListPage from './pages/GuildListPage'
 import GuildCreatePage from './pages/GuildCreatePage'
@@ -12,6 +14,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<JobClassPage />} />
+        <Route path="/job-classes/:id" element={<JobClassDetailPage />} />
+        <Route path="/guest-quest/:job_class_id" element={<GuestQuestPage />} />
         <Route path="/profile" element={
           <>
             <SignedIn><ProfilePage /></SignedIn>

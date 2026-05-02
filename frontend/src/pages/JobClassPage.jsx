@@ -55,14 +55,10 @@ export default function JobClassPage() {
     if (!profile || !profile.job_class_id || !profile.job_rank) return '冒険者'
     const job = jobClasses.find(j => j.id === profile.job_class_id)
     if (!job) return '冒険者'
-
     if (job.category === 'night_wom') {
-      const womRanks = {
-        kou: '夜皇姫', ou: '夜王妃', shou: '夜将姫', shi: '夜士女', hito: '夜の人'
-      }
+      const womRanks = { kou: '夜皇姫', ou: '夜王妃', shou: '夜将姫', shi: '夜士女', hito: '夜の人' }
       return womRanks[profile.job_rank] || '冒険者'
     }
-
     const rank = RANK_LABELS[profile.job_rank] || ''
     return `${job.rp_prefix}${rank}`
   }
@@ -79,7 +75,8 @@ export default function JobClassPage() {
       <h1 style={{ textAlign: 'center', fontSize: '3rem', background: 'linear-gradient(135deg, #667eea, #764ba2)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
         Meets Summit - ミーツサミット
       </h1>
-      <p style={{ textAlign: 'center', color: '#888', marginBottom: '2rem' }}>RPG × マッチング</p>
+      <p style={{ textAlign: 'center', color: '#888', marginBottom: '4px' }}>クイズRPG × マッチング</p>
+      <p style={{ textAlign: 'center', color: '#B4965A', fontSize: '13px', letterSpacing: '3px', marginBottom: '2rem' }}>知識が、出逢いになる。</p>
 
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <SignedOut>
@@ -116,7 +113,6 @@ export default function JobClassPage() {
                     onMouseOut={e => e.currentTarget.style.borderColor = '#2a2a3e'}>
                     <span style={{ fontSize: '1.2rem' }}>{m.guilds?.icon || '⚔️'}</span>
                     <span style={{ fontSize: '13px', fontWeight: 500 }}>{m.guilds?.name || 'ギルド'}</span>
-                    <span style={{ fontSize: '11px', color: '#888' }}>👥{m.guilds?.member_limit}</span>
                   </div>
                 ))}
               </div>
@@ -125,15 +121,19 @@ export default function JobClassPage() {
         </SignedIn>
       </div>
 
-      <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>職業クラス一覧</h2>
+      <h2 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>職業クラス一覧</h2>
+      <p style={{ textAlign: 'center', color: '#666', fontSize: '12px', marginBottom: '1.5rem' }}>職業をタップしてクイズに挑戦！</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', maxWidth: '900px', margin: '0 auto' }}>
         {jobClasses.map(job => (
-          <div key={job.id} style={{ background: '#1a1a2e', border: '1px solid #333', borderRadius: '12px', padding: '1.5rem', textAlign: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
-            onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
-            onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}>
+          <div key={job.id}
+            onClick={() => navigate(`/job-classes/${job.id}`)}
+            style={{ background: '#1a1a2e', border: '1px solid #333', borderRadius: '12px', padding: '1.5rem', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+            onMouseOver={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.borderColor = '#667eea' }}
+            onMouseOut={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.borderColor = '#333' }}>
             <div style={{ fontSize: '2.5rem' }}>{job.icon}</div>
             <div style={{ fontWeight: 'bold', marginTop: '0.5rem' }}>{job.name}</div>
             <div style={{ color: '#888', fontSize: '0.85rem' }}>{job.rp_prefix}皇〜{job.rp_prefix}の人</div>
+            <div style={{ marginTop: '8px', fontSize: '11px', color: '#667eea' }}>クイズに挑戦 →</div>
           </div>
         ))}
       </div>
