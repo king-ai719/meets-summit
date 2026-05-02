@@ -1,12 +1,35 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
 
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
+const RANK_LABEL = {
+  hito: 'の人',
+  shi:  '士',
+  shou: '将',
+  ou:   '王',
+  kou:  '皇',
+}
+
 function Avatar({ seed, size = 40 }) {
   const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
   return <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea' }} />
+}
+
+function buildTitle(userObj) {
+  if (!userObj) return '冒険者'
+  const prefix = userObj.job_classes?.rp_prefix || ''
+  const rank   = RANK_LABEL[userObj.job_rank] || ''
+  if (!prefix && !rank) return '冒険者'
+  return `${prefix}${rank}`
+}
+
+function formatTime(isoStr) {
+  const d = new Date(isoStr)
+  const h = d.getHours().toString().padStart(2, '0')
+  const m = d.getMinutes().toString().padStart(2, '0')
+  return `${h}:${m}`
 }
 
 export default function GuildDetailPage() {
@@ -23,6 +46,14 @@ export default function GuildDetailPage() {
   const [leaving, setLeaving] = useState(false)
   const [dissolving, setDissolving] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  const [messages, setMessages] = useState([])
+  const [chatInput, setChatInput] = useState('')
+  const [sending, setSending] = useState(false)
+  const [hasChatAccess, setHasChatAccess] = useState(false)
+  const [activeTab, setActiveTab] = useState('quests')
+  const messagesEndRef = useRef(null)
+  const pollingRef = useRef(null)
 
   useEffect(() => {
     fetch(`${API}/api/guilds/${id}`)
@@ -55,6 +86,55 @@ export default function GuildDetailPage() {
     setIsOwner(guild.owner_id === profile.id)
   }, [profile, members, guild])
 
+  useEffect(() => {
+    if (!profile || !isMember) return
+    fetch(`${API}/api/guilds/${id}/chat-access?user_id=${profile.id}`)
+      .then(res => res.json())
+      .then(data => setHasChatAccess(data.has_access))
+  }, [profile, isMember, id])
+
+  const fetchMessages = () => {
+    fetch(`${API}/api/guilds/${id}/messages`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.data)) setMessages(data.data)
+      })
+  }
+
+  useEffect(() => {
+    if (activeTab === 'chat' && hasChatAccess) {
+      fetchMessages()
+      pollingRef.current = setInterval(fetchMessages, 5000)
+    } else {
+      clearInterval(pollingRef.current)
+    }
+    return () => clearInterval(pollingRef.current)
+  }, [activeTab, hasChatAccess])
+
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, activeTab])
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !profile || sending) return
+    setSending(true)
+    try {
+      const res = await fetch(`${API}/api/guilds/${id}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: profile.id, content: chatInput }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setChatInput('')
+        fetchMessages()
+      } else alert('送信に失敗しました')
+    } catch { alert('通信エラー') }
+    finally { setSending(false) }
+  }
+
   const handleJoin = async () => {
     if (!profile) return alert('先にプロフィールを設定してください')
     setJoining(true)
@@ -67,7 +147,9 @@ export default function GuildDetailPage() {
       const data = await res.json()
       if (data.success) {
         setIsMember(true)
-        setMembers(prev => [...prev, { user_id: profile.id, username: profile.username }])
+        fetch(`${API}/api/guilds/${id}/members`)
+          .then(res => res.json())
+          .then(data => setMembers(Array.isArray(data.data) ? data.data : []))
       } else alert('参加に失敗しました')
     } catch { alert('通信エラー') }
     finally { setJoining(false) }
@@ -108,15 +190,22 @@ export default function GuildDetailPage() {
   }
 
   const difficultyLabel = (d) => {
-    if (d === 'normal') return { label: 'NORMAL', color: '#4CAF50' }
-    if (d === 'hard') return { label: 'HARD', color: '#FF9800' }
-    return { label: 'VERY HARD', color: '#cc3333' }
+    if (d === 'normal') return { label: 'NORMAL', color: '#4CAF50', icon: '🗡️' }
+    if (d === 'hard') return { label: 'HARD', color: '#FF9800', icon: '⚔️' }
+    return { label: 'VERY HARD', color: '#cc3333', icon: '💀' }
   }
 
   const s = {
     page: { minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' },
     card: { maxWidth: '700px', margin: '0 auto', background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '16px', padding: '2rem' },
     divider: { height: '1px', background: '#1e1e2e', margin: '1.5rem 0' },
+    tab: (active) => ({
+      flex: 1, padding: '10px', border: 'none', cursor: 'pointer', fontSize: '13px', letterSpacing: '1px',
+      background: active ? '#1a1a2e' : 'transparent',
+      color: active ? '#B4965A' : '#666',
+      borderBottom: active ? '2px solid #B4965A' : '2px solid transparent',
+      transition: 'all .2s',
+    }),
   }
 
   if (loading) return (
@@ -134,6 +223,7 @@ export default function GuildDetailPage() {
   return (
     <div style={s.page}>
       <div style={s.card}>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
           <button onClick={() => navigate('/guilds')} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem' }}>←</button>
           <div style={{ fontSize: '3rem' }}>{guild.icon || '⚔️'}</div>
@@ -183,7 +273,8 @@ export default function GuildDetailPage() {
               )}
             </div>
           ) : (
-            <button onClick={handleJoin} disabled={joining} style={{ width: '100%', padding: '14px', border: '1px solid #B4965A', borderRadius: '10px', background: 'transparent', color: '#B4965A', fontSize: '15px', letterSpacing: '2px', cursor: 'pointer', marginBottom: '1.5rem', transition: 'all .2s' }}
+            <button onClick={handleJoin} disabled={joining}
+              style={{ width: '100%', padding: '14px', border: '1px solid #B4965A', borderRadius: '10px', background: 'transparent', color: '#B4965A', fontSize: '15px', letterSpacing: '2px', cursor: 'pointer', marginBottom: '1.5rem', transition: 'all .2s' }}
               onMouseOver={e => { e.currentTarget.style.background = '#B4965A'; e.currentTarget.style.color = '#0a0a0f' }}
               onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#B4965A' }}>
               {joining ? '参加中...' : 'Join — このギルドに参加する'}
@@ -193,52 +284,184 @@ export default function GuildDetailPage() {
 
         <div style={s.divider} />
 
-        <h2 style={{ fontSize: '1rem', letterSpacing: '2px', color: '#888', marginBottom: '1rem' }}>QUESTS</h2>
-        {quests.length === 0 ? (
-          <p style={{ color: '#666', textAlign: 'center', marginBottom: '1rem' }}>クエストがありません</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '1.5rem' }}>
-            {quests.map(quest => {
-              const diff = difficultyLabel(quest.difficulty)
-              return (
-                <div key={quest.id} style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: '10px', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 500, marginBottom: '4px' }}>{quest.title}</div>
-                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: '#0f0f1a', color: diff.color, border: `1px solid ${diff.color}` }}>
-                      {diff.label}
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#888', marginLeft: '8px' }}>⏱ {quest.time_limit}s</span>
-                  </div>
-                  {isMember && (
-                    <button onClick={() => navigate(`/quests/${quest.id}`)}
-                      style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                      挑戦する
-                    </button>
-                  )}
-                </div>
-              )
-            })}
+        <div style={{ display: 'flex', borderBottom: '1px solid #2a2a3e', marginBottom: '1.5rem' }}>
+          <button style={s.tab(activeTab === 'quests')} onClick={() => setActiveTab('quests')}>⚔️ QUESTS</button>
+          <button style={s.tab(activeTab === 'chat')} onClick={() => setActiveTab('chat')}>
+            💬 CHAT {!hasChatAccess && isMember ? '🔒' : ''}
+          </button>
+          <button style={s.tab(activeTab === 'members')} onClick={() => setActiveTab('members')}>👥 MEMBERS</button>
+        </div>
+
+        {activeTab === 'quests' && (
+          <div>
+            {quests.length === 0 ? (
+              <p style={{ color: '#666', textAlign: 'center', marginBottom: '1rem' }}>クエストがありません</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {quests.map(quest => {
+                  const diff = difficultyLabel(quest.difficulty)
+                  return (
+                    <div key={quest.id} style={{ background: '#1a1a2e', border: `1px solid ${diff.color}22`, borderRadius: '10px', padding: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '18px' }}>{diff.icon}</span>
+                            <span style={{ fontWeight: 600, fontSize: '15px' }}>{quest.title}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: '#0f0f1a', color: diff.color, border: `1px solid ${diff.color}` }}>
+                              {diff.label}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#888' }}>⏱ {quest.time_limit}s</span>
+                            {quest.reward_title && (
+                              <span style={{ fontSize: '11px', color: '#B4965A' }}>🏆 {quest.reward_title}</span>
+                            )}
+                          </div>
+                        </div>
+                        {isMember && (
+                          <button onClick={() => navigate(`/quests/${quest.id}`)}
+                            style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap', marginLeft: '12px' }}>
+                            挑戦する
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 
-        <div style={s.divider} />
+        {activeTab === 'chat' && (
+          <div>
+            {!isMember ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🔒</div>
+                <div>ギルドに参加するとチャットが使えます</div>
+              </div>
+            ) : !hasChatAccess ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#666', background: '#1a1a2e', borderRadius: '12px' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>⚔️</div>
+                <div style={{ fontWeight: 600, marginBottom: '8px', color: '#888' }}>チャット解放条件</div>
+                <div style={{ fontSize: '13px', lineHeight: '1.8' }}>
+                  このギルドのクエストをクリアすると<br />
+                  フリーチャットが解放されます
+                </div>
+                <button
+                  onClick={() => setActiveTab('quests')}
+                  style={{ marginTop: '16px', padding: '8px 20px', border: '1px solid #667eea', borderRadius: '8px', background: 'transparent', color: '#667eea', cursor: 'pointer', fontSize: '13px' }}>
+                  クエストに挑戦する →
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ height: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px', padding: '4px' }}>
+                  {messages.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: '#666', marginTop: '2rem', fontSize: '13px' }}>
+                      まだメッセージがありません。最初の一言を送ろう！
+                    </div>
+                  ) : (
+                    messages.map((msg, i) => {
+                      const u = msg.users || {}
+                      const isMe = profile && msg.user_id === profile.id
+                      const name = u.username || '冒険者'
+                      const title = buildTitle(u)
+                      const isMsgGM = members.some(m => m.user_id === msg.user_id && m.role === 'master')
 
-        <h2 style={{ fontSize: '1rem', letterSpacing: '2px', color: '#888', marginBottom: '1rem' }}>MEMBERS</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {members.length === 0 ? (
-            <p style={{ color: '#666', textAlign: 'center' }}>まだメンバーがいません</p>
-          ) : (
-            members.map((member, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#1a1a2e', borderRadius: '10px' }}>
-                <Avatar seed={member.user_id} size={40} />
-                <div>
-                  <div style={{ fontWeight: 500 }}>{member.username || '冒険者'}</div>
-                  <div style={{ fontSize: '12px', color: '#888' }}>{member.role === 'master' ? '🏰 ギルドマスター' : 'メンバー'}</div>
+                      return (
+                        <div key={i} style={{ display: 'flex', gap: '10px', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
+                          {!isMe && <Avatar seed={name} size={32} />}
+                          <div style={{ maxWidth: '70%' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', flexDirection: isMe ? 'row-reverse' : 'row' }}>
+                              {isMsgGM && (
+                                <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 6px', color: '#B4965A' }}>🏰</span>
+                              )}
+                              <span style={{ fontSize: '11px', color: '#888' }}>{name}</span>
+                              {!isMe && <span style={{ fontSize: '11px', color: '#B4965A' }}>{title}</span>}
+                            </div>
+                            <div style={{
+                              background: isMe ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#1a1a2e',
+                              border: isMe ? 'none' : '1px solid #2a2a3e',
+                              borderRadius: isMe ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                              padding: '10px 14px',
+                              fontSize: '14px',
+                              lineHeight: '1.5',
+                              wordBreak: 'break-word',
+                            }}>
+                              {msg.content}
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#555', marginTop: '3px', textAlign: isMe ? 'right' : 'left' }}>
+                              {formatTime(msg.created_at)}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage() } }}
+                    placeholder="メッセージを入力..."
+                    style={{ flex: 1, background: '#1a1a2e', border: '1px solid #333', borderRadius: '8px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none' }}
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={sending || !chatInput.trim()}
+                    style={{ padding: '10px 18px', background: chatInput.trim() ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#2a2a3e', border: 'none', borderRadius: '8px', color: 'white', cursor: chatInput.trim() ? 'pointer' : 'default', fontSize: '14px', transition: 'all .2s' }}>
+                    {sending ? '...' : '送信'}
+                  </button>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'members' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {members.length === 0 ? (
+              <p style={{ color: '#666', textAlign: 'center' }}>まだメンバーがいません</p>
+            ) : (
+              members.map((member, i) => {
+                const u       = member.users || {}
+                const name    = u.username || '冒険者'
+                const title   = buildTitle(u)
+                const jobIcon = u.job_classes?.icon || '⚔️'
+                const isGM    = member.role === 'master'
+
+                return (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    padding: '12px', background: '#1a1a2e', borderRadius: '10px',
+                    border: isGM ? '1px solid #B4965A55' : '1px solid transparent',
+                  }}>
+                    <Avatar seed={name} size={44} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {name}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                        <span style={{ fontSize: '14px' }}>{jobIcon}</span>
+                        <span style={{ fontSize: '12px', color: '#B4965A' }}>{title}</span>
+                        {isGM && (
+                          <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 7px', color: '#B4965A', marginLeft: '4px' }}>
+                            GM
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   )

@@ -49,6 +49,7 @@ export default function GuildCreatePage() {
     if (!profile) return alert('先にプロフィールを設定してください')
     setSaving(true)
     try {
+      // ギルド作成
       const res = await fetch(`${API}/api/guilds`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,8 +60,21 @@ export default function GuildCreatePage() {
         }),
       })
       const data = await res.json()
-      if (data.success) navigate('/guilds')
-      else alert('作成に失敗しました：' + JSON.stringify(data))
+      if (!data.success) return alert('作成に失敗しました：' + JSON.stringify(data))
+
+      // ギルド作成成功後にオーナーをmasterで登録
+      const guild = Array.isArray(data.data) ? data.data[0] : data.data
+      await fetch(`${API}/api/guild-members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guild_id: guild.id,
+          user_id: profile.id,
+          role: 'master',
+        }),
+      })
+
+      navigate('/guilds')
     } catch(e) { alert('通信エラー：' + e.message) }
     finally { setSaving(false) }
   }
