@@ -55,6 +55,14 @@ export default function JobClassPage() {
     if (!profile || !profile.job_class_id || !profile.job_rank) return '冒険者'
     const job = jobClasses.find(j => j.id === profile.job_class_id)
     if (!job) return '冒険者'
+
+    if (job.category === 'night_wom') {
+      const womRanks = {
+        kou: '夜皇姫', ou: '夜王妃', shou: '夜将姫', shi: '夜士女', hito: '夜の人'
+      }
+      return womRanks[profile.job_rank] || '冒険者'
+    }
+
     const rank = RANK_LABELS[profile.job_rank] || ''
     return `${job.rp_prefix}${rank}`
   }
