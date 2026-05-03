@@ -40,6 +40,7 @@ export default function GuildDetailPage() {
   const [members, setMembers] = useState([])
   const [profile, setProfile] = useState(null)
   const [quests, setQuests] = useState([])
+  const [questUnlocks, setQuestUnlocks] = useState({})
   const [isMember, setIsMember] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
   const [joining, setJoining] = useState(false)
@@ -92,6 +93,19 @@ export default function GuildDetailPage() {
       .then(res => res.json())
       .then(data => setHasChatAccess(data.has_access))
   }, [profile, isMember, id])
+
+  // 解放条件チェック（unlock_conditionがあるクエストのみ）
+  useEffect(() => {
+    if (!profile || quests.length === 0) return
+    const lockedQuests = quests.filter(q => q.unlock_condition)
+    lockedQuests.forEach(quest => {
+      fetch(`${API}/api/quests/${quest.id}/unlock-check?user_id=${profile.id}`)
+        .then(res => res.json())
+        .then(data => {
+          setQuestUnlocks(prev => ({ ...prev, [quest.id]: data }))
+        })
+    })
+  }, [profile, quests])
 
   const fetchMessages = () => {
     fetch(`${API}/api/guilds/${id}/messages`)
@@ -300,29 +314,57 @@ export default function GuildDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {quests.map(quest => {
                   const diff = difficultyLabel(quest.difficulty)
+                  const unlockInfo = questUnlocks[quest.id]
+                  const isLocked = quest.unlock_condition && (!unlockInfo || !unlockInfo.unlocked)
+                  const lockReasons = unlockInfo?.conditions?.filter(c => !c.met).map(c => c.message) || []
+
                   return (
-                    <div key={quest.id} style={{ background: '#1a1a2e', border: `1px solid ${diff.color}22`, borderRadius: '10px', padding: '1rem' }}>
+                    <div key={quest.id} style={{
+                      background: isLocked ? '#141420' : '#1a1a2e',
+                      border: `1px solid ${isLocked ? '#333' : diff.color + '22'}`,
+                      borderRadius: '10px', padding: '1rem',
+                      opacity: isLocked ? 0.7 : 1,
+                    }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '18px' }}>{diff.icon}</span>
-                            <span style={{ fontWeight: 600, fontSize: '15px' }}>{quest.title}</span>
+                            <span style={{ fontSize: '18px' }}>{isLocked ? '🔒' : diff.icon}</span>
+                            <span style={{ fontWeight: 600, fontSize: '15px', color: isLocked ? '#666' : 'white' }}>{quest.title}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: '#0f0f1a', color: diff.color, border: `1px solid ${diff.color}` }}>
+                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: '#0f0f1a', color: isLocked ? '#555' : diff.color, border: `1px solid ${isLocked ? '#333' : diff.color}` }}>
                               {diff.label}
                             </span>
                             <span style={{ fontSize: '11px', color: '#888' }}>⏱ {quest.time_limit}s</span>
-                            {quest.reward_title && (
-                              <span style={{ fontSize: '11px', color: '#B4965A' }}>🏆 {quest.reward_title}</span>
+                            {quest.reward_value && (
+                              <span style={{ fontSize: '11px', color: isLocked ? '#555' : '#B4965A' }}>🏆 {quest.reward_value}</span>
                             )}
                           </div>
+                          {/* 解放条件表示 */}
+                          {isLocked && lockReasons.length > 0 && (
+                            <div style={{ marginTop: '8px', padding: '6px 10px', background: '#0f0f1a', borderRadius: '6px', border: '1px solid #2a2a3e' }}>
+                              <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px' }}>解放条件（いずれか）：</div>
+                              {lockReasons.map((reason, i) => (
+                                <div key={i} style={{ fontSize: '11px', color: '#cc3333' }}>• {reason}</div>
+                              ))}
+                            </div>
+                          )}
+                          {isLocked && !unlockInfo && quest.unlock_condition && (
+                            <div style={{ marginTop: '8px', fontSize: '11px', color: '#666' }}>
+                              🔒 解放条件あり
+                            </div>
+                          )}
                         </div>
-                        {isMember && (
+                        {isMember && !isLocked && (
                           <button onClick={() => navigate(`/quests/${quest.id}`)}
                             style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap', marginLeft: '12px' }}>
                             挑戦する
                           </button>
+                        )}
+                        {isMember && isLocked && (
+                          <div style={{ fontSize: '12px', color: '#555', marginLeft: '12px', whiteSpace: 'nowrap' }}>
+                            🔒 ロック中
+                          </div>
                         )}
                       </div>
                     </div>
