@@ -10,6 +10,7 @@ import GuildCreatePage from './pages/GuildCreatePage'
 import GuildDetailPage from './pages/GuildDetailPage'
 import QuestPage from './pages/QuestPage'
 import PublicProfilePage from './pages/PublicProfilePage'
+import PlanPage from './pages/PlanPage'
 import BgmButton, { useBgm } from './BgmPlayer'
 
 function BgmController({ bgm }) {
@@ -56,6 +57,12 @@ function App() {
           </>
         } />
         <Route path="/users/:user_id" element={<PublicProfilePage />} />
+        <Route path="/plan" element={
+          <>
+            <SignedIn><PlanPage /></SignedIn>
+            <SignedOut><RedirectToSignIn /></SignedOut>
+          </>
+        } />
       </Routes>
     </BrowserRouter>
   )
