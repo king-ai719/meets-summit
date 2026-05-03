@@ -22,7 +22,7 @@ function Avatar({ seed, size = 36 }) {
   return <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea' }} />
 }
 
-export default function QuestPage() {
+export default function QuestPage({ bgm }) {
   const { quest_id } = useParams()
   const navigate = useNavigate()
   const { user } = useUser()
@@ -52,7 +52,6 @@ export default function QuestPage() {
       .then(data => setQuest(data.data))
   }, [quest_id])
 
-  // クリア者一覧取得
   useEffect(() => {
     fetch(`${API}/api/quests/${quest_id}/results`)
       .then(res => res.json())
@@ -95,6 +94,31 @@ export default function QuestPage() {
         })
     }
   }, [quest])
+
+  // BGM制御
+  useEffect(() => {
+    if (!quest || !bgm) return
+    if (phase === 'playing') {
+      if (quest.difficulty === 'very_hard') {
+        bgm.play('very_hard')
+      } else {
+        bgm.play('battle')
+      }
+    }
+    if (phase === 'cleared') {
+      bgm.play('fanfare')
+    }
+    if (phase === 'gameover') {
+      bgm.stop()
+    }
+  }, [phase, quest])
+
+  // ページ離脱時にトップBGMに戻す
+  useEffect(() => {
+    return () => {
+      if (bgm) bgm.play('top')
+    }
+  }, [])
 
   useEffect(() => {
     if (phase !== 'playing') return
@@ -163,7 +187,6 @@ export default function QuestPage() {
         wrong_count: wrongCount,
       }),
     })
-    // クリア者一覧を再取得
     if (cleared) {
       fetch(`${API}/api/quests/${quest_id}/results`)
         .then(res => res.json())
@@ -240,7 +263,6 @@ export default function QuestPage() {
             </div>
           )}
 
-          {/* クリア者一覧 */}
           {clearers.length > 0 && (
             <div style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
               <div style={{ fontSize: '12px', color: '#888', letterSpacing: '2px', marginBottom: '10px' }}>
@@ -275,7 +297,6 @@ export default function QuestPage() {
           <p style={{ color: '#888', marginBottom: '0.5rem' }}>ライフがなくなりました</p>
           <p style={{ color: '#666', fontSize: '13px', marginBottom: '2rem' }}>もう一度挑戦しよう！</p>
 
-          {/* クリア者一覧（ゲームオーバー時も表示） */}
           {clearers.length > 0 && (
             <div style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
               <div style={{ fontSize: '12px', color: '#888', letterSpacing: '2px', marginBottom: '10px' }}>
@@ -326,7 +347,6 @@ export default function QuestPage() {
           </div>
         )}
 
-        {/* クリア者一覧（プレイ中も表示） */}
         {clearers.length > 0 && (
           <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '11px', color: '#666' }}>クリア者：</span>
