@@ -60,6 +60,8 @@ export default function GuildDetailPage() {
   const [sending, setSending] = useState(false)
   const [hasChatAccess, setHasChatAccess] = useState(false)
   const [activeTab, setActiveTab] = useState('quests')
+  const [hoveredMsg, setHoveredMsg] = useState(null)
+  const [reactions, setReactions] = useState({})
   const messagesEndRef = useRef(null)
   const pollingRef = useRef(null)
 
@@ -132,6 +134,32 @@ export default function GuildDetailPage() {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages, activeTab])
+
+  // リアクション取得
+  const fetchReaction = async (message_id) => {
+    if (reactions[message_id]) return
+    const res = await fetch(`${API}/api/message-reactions?message_id=${message_id}&user_id=${profile?.id || ''}`)
+    const data = await res.json()
+    if (data.success) {
+      setReactions(prev => ({ ...prev, [message_id]: data }))
+    }
+  }
+
+  // リアクション送信
+  const handleReaction = async (message_id, reaction_type) => {
+    if (!profile) return
+    await fetch(`${API}/api/message-reactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message_id, user_id: profile.id, reaction_type }),
+    })
+    // リアクション再取得
+    const res = await fetch(`${API}/api/message-reactions?message_id=${message_id}&user_id=${profile.id}`)
+    const data = await res.json()
+    if (data.success) {
+      setReactions(prev => ({ ...prev, [message_id]: data }))
+    }
+  }
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !profile || sending) return
@@ -395,10 +423,13 @@ export default function GuildDetailPage() {
                       const name = u.username || '冒険者'
                       const title = buildTitle(u)
                       const isMsgGM = members.some(m => m.user_id === msg.user_id && m.role === 'master')
+                      const msgReaction = reactions[msg.id]
 
                       return (
-                        <div key={i} style={{ display: 'flex', gap: '10px', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
-                          {/* アバタークリックでプロフィールへ */}
+                        <div key={i}
+                          onMouseEnter={() => { setHoveredMsg(msg.id); fetchReaction(msg.id) }}
+                          onMouseLeave={() => setHoveredMsg(null)}
+                          style={{ display: 'flex', gap: '10px', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end', position: 'relative' }}>
                           {!isMe && (
                             <div onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ cursor: u.id ? 'pointer' : 'default' }}>
                               <Avatar seed={name} size={32} />
@@ -409,9 +440,7 @@ export default function GuildDetailPage() {
                               {isMsgGM && (
                                 <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 6px', color: '#B4965A' }}>🏰</span>
                               )}
-                              <span
-                                onClick={() => u.id && navigate(`/users/${u.id}`)}
-                                style={{ fontSize: '11px', color: '#888', cursor: u.id ? 'pointer' : 'default' }}>
+                              <span onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ fontSize: '11px', color: '#888', cursor: u.id ? 'pointer' : 'default' }}>
                                 {name}
                               </span>
                               {!isMe && <span style={{ fontSize: '11px', color: '#B4965A' }}>{title}</span>}
@@ -424,9 +453,51 @@ export default function GuildDetailPage() {
                             }}>
                               {msg.content}
                             </div>
-                            <div style={{ fontSize: '10px', color: '#555', marginTop: '3px', textAlign: isMe ? 'right' : 'left' }}>
-                              {formatTime(msg.created_at)}
+
+                            {/* リアクション表示 */}
+                            <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'center' }}>
+                              <div style={{ fontSize: '10px', color: '#555' }}>{formatTime(msg.created_at)}</div>
+                              {msgReaction && (msgReaction.love_count > 0 || msgReaction.broken_count > 0) && (
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  {msgReaction.love_count > 0 && (
+                                    <span style={{ fontSize: '11px', background: '#ff444422', border: '1px solid #ff444466', borderRadius: '99px', padding: '1px 6px', cursor: 'pointer' }}
+                                      onClick={() => handleReaction(msg.id, 'love')}>
+                                      ❤️ {msgReaction.love_count}
+                                    </span>
+                                  )}
+                                  {msgReaction.broken_count > 0 && (
+                                    <span style={{ fontSize: '11px', background: '#66666622', border: '1px solid #66666666', borderRadius: '99px', padding: '1px 6px', cursor: 'pointer' }}
+                                      onClick={() => handleReaction(msg.id, 'broken')}>
+                                      💔 {msgReaction.broken_count}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
+
+                            {/* ホバー時リアクションボタン */}
+                            {hoveredMsg === msg.id && profile && msg.user_id !== profile.id && (
+                              <div style={{
+                                position: 'absolute',
+                                [isMe ? 'left' : 'right']: '0',
+                                bottom: '30px',
+                                display: 'flex', gap: '4px',
+                                background: '#1a1a2e', border: '1px solid #2a2a3e',
+                                borderRadius: '20px', padding: '4px 8px',
+                                zIndex: 10,
+                              }}>
+                                <button onClick={() => handleReaction(msg.id, 'love')}
+                                  style={{
+                                    background: msgReaction?.my_reaction === 'love' ? '#ff444433' : 'transparent',
+                                    border: 'none', cursor: 'pointer', fontSize: '16px', padding: '2px 4px', borderRadius: '99px',
+                                  }}>❤️</button>
+                                <button onClick={() => handleReaction(msg.id, 'broken')}
+                                  style={{
+                                    background: msgReaction?.my_reaction === 'broken' ? '#66666633' : 'transparent',
+                                    border: 'none', cursor: 'pointer', fontSize: '16px', padding: '2px 4px', borderRadius: '99px',
+                                  }}>💔</button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -475,13 +546,11 @@ export default function GuildDetailPage() {
                     border: isGM ? '1px solid #B4965A55' : '1px solid transparent',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      {/* アバタークリックでプロフィールへ */}
                       <div onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ cursor: u.id ? 'pointer' : 'default' }}>
                         <Avatar seed={name} size={44} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          onClick={() => u.id && navigate(`/users/${u.id}`)}
+                        <div onClick={() => u.id && navigate(`/users/${u.id}`)}
                           style={{ fontWeight: 600, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: u.id ? 'pointer' : 'default' }}>
                           {name}
                         </div>
