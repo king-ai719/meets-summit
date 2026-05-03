@@ -17,6 +17,11 @@ const LOADING_MESSAGE = {
   very_hard: { icon: '💀', text: '伝説級の試練を召喚中...' },
 }
 
+function Avatar({ seed, size = 36 }) {
+  const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
+  return <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea' }} />
+}
+
 export default function QuestPage() {
   const { quest_id } = useParams()
   const navigate = useNavigate()
@@ -32,6 +37,7 @@ export default function QuestPage() {
   const [timeLeft, setTimeLeft] = useState(60)
   const [reward, setReward] = useState(null)
   const [generating, setGenerating] = useState(false)
+  const [clearers, setClearers] = useState([])
 
   useEffect(() => {
     if (!user) return
@@ -44,6 +50,13 @@ export default function QuestPage() {
     fetch(`${API}/api/quests/${quest_id}`)
       .then(res => res.json())
       .then(data => setQuest(data.data))
+  }, [quest_id])
+
+  // クリア者一覧取得
+  useEffect(() => {
+    fetch(`${API}/api/quests/${quest_id}/results`)
+      .then(res => res.json())
+      .then(data => setClearers(Array.isArray(data.data) ? data.data : []))
   }, [quest_id])
 
   useEffect(() => {
@@ -150,6 +163,12 @@ export default function QuestPage() {
         wrong_count: wrongCount,
       }),
     })
+    // クリア者一覧を再取得
+    if (cleared) {
+      fetch(`${API}/api/quests/${quest_id}/results`)
+        .then(res => res.json())
+        .then(data => setClearers(Array.isArray(data.data) ? data.data : []))
+    }
     if (cleared && quest?.reward_value) {
       const res = await fetch(`${API}/api/users/reward`, {
         method: 'POST',
@@ -208,6 +227,7 @@ export default function QuestPage() {
           <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
           <h1 style={{ fontSize: '2rem', color: '#B4965A', marginBottom: '0.5rem' }}>クエストクリア！</h1>
           <p style={{ color: '#888', marginBottom: '1.5rem' }}>チャットが解放されました！</p>
+
           {reward && (
             <div style={{ background: '#1a1a2e', border: `1px solid ${RARITY_COLOR[reward.rarity]}`, borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
               <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>🏆 報酬獲得！</div>
@@ -219,6 +239,24 @@ export default function QuestPage() {
               </div>
             </div>
           )}
+
+          {/* クリア者一覧 */}
+          {clearers.length > 0 && (
+            <div style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
+              <div style={{ fontSize: '12px', color: '#888', letterSpacing: '2px', marginBottom: '10px' }}>
+                ⚔️ このクエストのクリア者 ({clearers.length}人)
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {clearers.map((c, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0f0f1a', borderRadius: '99px', padding: '4px 10px 4px 4px' }}>
+                    <Avatar seed={c.users?.username || String(i)} size={24} />
+                    <span style={{ fontSize: '12px', color: '#ccc' }}>{c.users?.username || '冒険者'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button onClick={() => navigate(-1)}
             style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none', padding: '0.8rem 2rem', borderRadius: '8px', cursor: 'pointer' }}>
             ギルドに戻る
@@ -236,6 +274,24 @@ export default function QuestPage() {
           <h1 style={{ fontSize: '2rem', color: '#cc3333', marginBottom: '0.5rem' }}>ゲームオーバー</h1>
           <p style={{ color: '#888', marginBottom: '0.5rem' }}>ライフがなくなりました</p>
           <p style={{ color: '#666', fontSize: '13px', marginBottom: '2rem' }}>もう一度挑戦しよう！</p>
+
+          {/* クリア者一覧（ゲームオーバー時も表示） */}
+          {clearers.length > 0 && (
+            <div style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
+              <div style={{ fontSize: '12px', color: '#888', letterSpacing: '2px', marginBottom: '10px' }}>
+                ⚔️ クリア者 ({clearers.length}人)
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {clearers.map((c, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0f0f1a', borderRadius: '99px', padding: '4px 10px 4px 4px' }}>
+                    <Avatar seed={c.users?.username || String(i)} size={24} />
+                    <span style={{ fontSize: '12px', color: '#ccc' }}>{c.users?.username || '冒険者'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button onClick={() => navigate(-1)}
             style={{ background: '#1a1a2e', color: 'white', border: '1px solid #333', padding: '0.8rem 2rem', borderRadius: '8px', cursor: 'pointer' }}>
             ギルドに戻る
@@ -267,6 +323,21 @@ export default function QuestPage() {
             <span style={{ fontSize: '11px', background: (RARITY_COLOR[quest.reward_rarity] || '#B4965A') + '33', border: `1px solid ${RARITY_COLOR[quest.reward_rarity] || '#B4965A'}`, borderRadius: '99px', padding: '1px 6px', color: RARITY_COLOR[quest.reward_rarity] || '#B4965A' }}>
               {quest.reward_rarity || 'C'}
             </span>
+          </div>
+        )}
+
+        {/* クリア者一覧（プレイ中も表示） */}
+        {clearers.length > 0 && (
+          <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '11px', color: '#666' }}>クリア者：</span>
+            {clearers.slice(0, 5).map((c, i) => (
+              <div key={i} title={c.users?.username || '冒険者'}>
+                <Avatar seed={c.users?.username || String(i)} size={24} />
+              </div>
+            ))}
+            {clearers.length > 5 && (
+              <span style={{ fontSize: '11px', color: '#666' }}>+{clearers.length - 5}人</span>
+            )}
           </div>
         )}
 

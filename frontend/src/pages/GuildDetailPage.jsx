@@ -12,6 +12,13 @@ const RANK_LABEL = {
   kou:  '皇',
 }
 
+const RARITY_COLOR = {
+  S: '#ff4444',
+  A: '#ff9900',
+  B: '#667eea',
+  C: '#4CAF50',
+}
+
 function Avatar({ seed, size = 40 }) {
   const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
   return <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea' }} />
@@ -94,7 +101,6 @@ export default function GuildDetailPage() {
       .then(data => setHasChatAccess(data.has_access))
   }, [profile, isMember, id])
 
-  // 解放条件チェック（unlock_conditionがあるクエストのみ）
   useEffect(() => {
     if (!profile || quests.length === 0) return
     const lockedQuests = quests.filter(q => q.unlock_condition)
@@ -340,7 +346,6 @@ export default function GuildDetailPage() {
                               <span style={{ fontSize: '11px', color: isLocked ? '#555' : '#B4965A' }}>🏆 {quest.reward_value}</span>
                             )}
                           </div>
-                          {/* 解放条件表示 */}
                           {isLocked && lockReasons.length > 0 && (
                             <div style={{ marginTop: '8px', padding: '6px 10px', background: '#0f0f1a', borderRadius: '6px', border: '1px solid #2a2a3e' }}>
                               <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px' }}>解放条件（いずれか）：</div>
@@ -475,28 +480,63 @@ export default function GuildDetailPage() {
                 const title   = buildTitle(u)
                 const jobIcon = u.job_classes?.icon || '⚔️'
                 const isGM    = member.role === 'master'
+                const badges  = Array.isArray(u.badges) ? u.badges : []
+                const titles  = Array.isArray(u.titles) ? u.titles : []
 
                 return (
                   <div key={i} style={{
-                    display: 'flex', alignItems: 'center', gap: '12px',
                     padding: '12px', background: '#1a1a2e', borderRadius: '10px',
                     border: isGM ? '1px solid #B4965A55' : '1px solid transparent',
                   }}>
-                    <Avatar seed={name} size={44} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {name}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
-                        <span style={{ fontSize: '14px' }}>{jobIcon}</span>
-                        <span style={{ fontSize: '12px', color: '#B4965A' }}>{title}</span>
-                        {isGM && (
-                          <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 7px', color: '#B4965A', marginLeft: '4px' }}>
-                            GM
-                          </span>
-                        )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Avatar seed={name} size={44} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {name}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                          <span style={{ fontSize: '14px' }}>{jobIcon}</span>
+                          <span style={{ fontSize: '12px', color: '#B4965A' }}>{title}</span>
+                          {isGM && (
+                            <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 7px', color: '#B4965A', marginLeft: '4px' }}>
+                              GM
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+
+                    {/* バッジ表示 */}
+                    {badges.length > 0 && (
+                      <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {badges.map((b, bi) => (
+                          <div key={bi} style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22',
+                            border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`,
+                            borderRadius: '99px', padding: '2px 8px',
+                          }}>
+                            <span style={{ fontSize: '12px' }}>{b.icon}</span>
+                            <span style={{ fontSize: '11px', color: RARITY_COLOR[b.rarity] || '#4CAF50' }}>{b.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 称号表示 */}
+                    {titles.length > 0 && (
+                      <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {titles.map((t, ti) => (
+                          <div key={ti} style={{
+                            background: (RARITY_COLOR[t.rarity] || '#4CAF50') + '11',
+                            border: `1px solid ${RARITY_COLOR[t.rarity] || '#4CAF50'}55`,
+                            borderRadius: '99px', padding: '2px 8px',
+                          }}>
+                            <span style={{ fontSize: '11px', color: RARITY_COLOR[t.rarity] || '#4CAF50' }}>🏆 {t.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )
               })
