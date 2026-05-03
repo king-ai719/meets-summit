@@ -9,6 +9,7 @@ import GuildListPage from './pages/GuildListPage'
 import GuildCreatePage from './pages/GuildCreatePage'
 import GuildDetailPage from './pages/GuildDetailPage'
 import QuestPage from './pages/QuestPage'
+import PublicProfilePage from './pages/PublicProfilePage'
 import BgmButton, { useBgm } from './BgmPlayer'
 
 function BgmController({ bgm }) {
@@ -19,7 +20,6 @@ function BgmController({ bgm }) {
     if (path === '/' || path.startsWith('/job-classes') || path.startsWith('/guilds')) {
       bgm.play('top')
     }
-    // クエスト中はQuestPageで制御するのでここでは何もしない
   }, [location.pathname])
 
   return <BgmButton bgm={bgm} />
@@ -55,6 +55,7 @@ function App() {
             <SignedOut><RedirectToSignIn /></SignedOut>
           </>
         } />
+        <Route path="/users/:user_id" element={<PublicProfilePage />} />
       </Routes>
     </BrowserRouter>
   )

@@ -107,18 +107,14 @@ export default function GuildDetailPage() {
     lockedQuests.forEach(quest => {
       fetch(`${API}/api/quests/${quest.id}/unlock-check?user_id=${profile.id}`)
         .then(res => res.json())
-        .then(data => {
-          setQuestUnlocks(prev => ({ ...prev, [quest.id]: data }))
-        })
+        .then(data => { setQuestUnlocks(prev => ({ ...prev, [quest.id]: data })) })
     })
   }, [profile, quests])
 
   const fetchMessages = () => {
     fetch(`${API}/api/guilds/${id}/messages`)
       .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data.data)) setMessages(data.data)
-      })
+      .then(data => { if (Array.isArray(data.data)) setMessages(data.data) })
   }
 
   useEffect(() => {
@@ -147,10 +143,8 @@ export default function GuildDetailPage() {
         body: JSON.stringify({ user_id: profile.id, content: chatInput }),
       })
       const data = await res.json()
-      if (data.success) {
-        setChatInput('')
-        fetchMessages()
-      } else alert('送信に失敗しました')
+      if (data.success) { setChatInput(''); fetchMessages() }
+      else alert('送信に失敗しました')
     } catch { alert('通信エラー') }
     finally { setSending(false) }
   }
@@ -167,9 +161,7 @@ export default function GuildDetailPage() {
       const data = await res.json()
       if (data.success) {
         setIsMember(true)
-        fetch(`${API}/api/guilds/${id}/members`)
-          .then(res => res.json())
-          .then(data => setMembers(Array.isArray(data.data) ? data.data : []))
+        fetch(`${API}/api/guilds/${id}/members`).then(res => res.json()).then(data => setMembers(Array.isArray(data.data) ? data.data : []))
       } else alert('参加に失敗しました')
     } catch { alert('通信エラー') }
     finally { setJoining(false) }
@@ -185,10 +177,8 @@ export default function GuildDetailPage() {
         body: JSON.stringify({ guild_id: id, user_id: profile.id }),
       })
       const data = await res.json()
-      if (data.success) {
-        setIsMember(false)
-        setMembers(prev => prev.filter(m => m.user_id !== profile.id))
-      } else alert('脱退に失敗しました')
+      if (data.success) { setIsMember(false); setMembers(prev => prev.filter(m => m.user_id !== profile.id)) }
+      else alert('脱退に失敗しました')
     } catch { alert('通信エラー') }
     finally { setLeaving(false) }
   }
@@ -229,15 +219,11 @@ export default function GuildDetailPage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-      読み込み中...
-    </div>
+    <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>読み込み中...</div>
   )
 
   if (!guild) return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-      ギルドが見つかりません
-    </div>
+    <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>ギルドが見つかりません</div>
   )
 
   return (
@@ -355,9 +341,7 @@ export default function GuildDetailPage() {
                             </div>
                           )}
                           {isLocked && !unlockInfo && quest.unlock_condition && (
-                            <div style={{ marginTop: '8px', fontSize: '11px', color: '#666' }}>
-                              🔒 解放条件あり
-                            </div>
+                            <div style={{ marginTop: '8px', fontSize: '11px', color: '#666' }}>🔒 解放条件あり</div>
                           )}
                         </div>
                         {isMember && !isLocked && (
@@ -367,9 +351,7 @@ export default function GuildDetailPage() {
                           </button>
                         )}
                         {isMember && isLocked && (
-                          <div style={{ fontSize: '12px', color: '#555', marginLeft: '12px', whiteSpace: 'nowrap' }}>
-                            🔒 ロック中
-                          </div>
+                          <div style={{ fontSize: '12px', color: '#555', marginLeft: '12px', whiteSpace: 'nowrap' }}>🔒 ロック中</div>
                         )}
                       </div>
                     </div>
@@ -392,11 +374,9 @@ export default function GuildDetailPage() {
                 <div style={{ fontSize: '2rem', marginBottom: '8px' }}>⚔️</div>
                 <div style={{ fontWeight: 600, marginBottom: '8px', color: '#888' }}>チャット解放条件</div>
                 <div style={{ fontSize: '13px', lineHeight: '1.8' }}>
-                  このギルドのクエストをクリアすると<br />
-                  フリーチャットが解放されます
+                  このギルドのクエストをクリアすると<br />フリーチャットが解放されます
                 </div>
-                <button
-                  onClick={() => setActiveTab('quests')}
+                <button onClick={() => setActiveTab('quests')}
                   style={{ marginTop: '16px', padding: '8px 20px', border: '1px solid #667eea', borderRadius: '8px', background: 'transparent', color: '#667eea', cursor: 'pointer', fontSize: '13px' }}>
                   クエストに挑戦する →
                 </button>
@@ -418,23 +398,29 @@ export default function GuildDetailPage() {
 
                       return (
                         <div key={i} style={{ display: 'flex', gap: '10px', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
-                          {!isMe && <Avatar seed={name} size={32} />}
+                          {/* アバタークリックでプロフィールへ */}
+                          {!isMe && (
+                            <div onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ cursor: u.id ? 'pointer' : 'default' }}>
+                              <Avatar seed={name} size={32} />
+                            </div>
+                          )}
                           <div style={{ maxWidth: '70%' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', flexDirection: isMe ? 'row-reverse' : 'row' }}>
                               {isMsgGM && (
                                 <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 6px', color: '#B4965A' }}>🏰</span>
                               )}
-                              <span style={{ fontSize: '11px', color: '#888' }}>{name}</span>
+                              <span
+                                onClick={() => u.id && navigate(`/users/${u.id}`)}
+                                style={{ fontSize: '11px', color: '#888', cursor: u.id ? 'pointer' : 'default' }}>
+                                {name}
+                              </span>
                               {!isMe && <span style={{ fontSize: '11px', color: '#B4965A' }}>{title}</span>}
                             </div>
                             <div style={{
                               background: isMe ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#1a1a2e',
                               border: isMe ? 'none' : '1px solid #2a2a3e',
                               borderRadius: isMe ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
-                              padding: '10px 14px',
-                              fontSize: '14px',
-                              lineHeight: '1.5',
-                              wordBreak: 'break-word',
+                              padding: '10px 14px', fontSize: '14px', lineHeight: '1.5', wordBreak: 'break-word',
                             }}>
                               {msg.content}
                             </div>
@@ -489,24 +475,26 @@ export default function GuildDetailPage() {
                     border: isGM ? '1px solid #B4965A55' : '1px solid transparent',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <Avatar seed={name} size={44} />
+                      {/* アバタークリックでプロフィールへ */}
+                      <div onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ cursor: u.id ? 'pointer' : 'default' }}>
+                        <Avatar seed={name} size={44} />
+                      </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div
+                          onClick={() => u.id && navigate(`/users/${u.id}`)}
+                          style={{ fontWeight: 600, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: u.id ? 'pointer' : 'default' }}>
                           {name}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
                           <span style={{ fontSize: '14px' }}>{jobIcon}</span>
                           <span style={{ fontSize: '12px', color: '#B4965A' }}>{title}</span>
                           {isGM && (
-                            <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 7px', color: '#B4965A', marginLeft: '4px' }}>
-                              GM
-                            </span>
+                            <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 7px', color: '#B4965A', marginLeft: '4px' }}>GM</span>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    {/* バッジ表示 */}
                     {badges.length > 0 && (
                       <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {badges.map((b, bi) => (
@@ -523,7 +511,6 @@ export default function GuildDetailPage() {
                       </div>
                     )}
 
-                    {/* 称号表示 */}
                     {titles.length > 0 && (
                       <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {titles.map((t, ti) => (
