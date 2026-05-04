@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -17,23 +17,20 @@ const GENDERS = [
   { value: 'other', label: 'その他' },
   { value: 'secret', label: '秘密' },
 ]
-
-const RARITY_COLOR = {
-  S: '#ff4444', A: '#ff9900', B: '#667eea', C: '#4CAF50',
-}
-const RANK_MAP = {
-  hito: 'の人', shi: '士', shou: '将', ou: '王', kou: '皇'
-}
-const NIGHT_WOM_MAP = {
-  hito: '夜の人', shi: '夜士女', shou: '夜将姫', ou: '夜王妃', kou: '夜皇姫'
-}
+const RARITY_COLOR = { S: '#ff4444', A: '#ff9900', B: '#667eea', C: '#4CAF50' }
+const RANK_MAP = { hito: 'の人', shi: '士', shou: '将', ou: '王', kou: '皇' }
+const NIGHT_WOM_MAP = { hito: '夜の人', shi: '夜士女', shou: '夜将姫', ou: '夜王妃', kou: '夜皇姫' }
 const BADGE_DESC = {
   '🗡️': '基礎知識を証明するバッジ',
   '⚔️': '専門知識を証明するバッジ',
   '💀': 'マスターレベルを証明するバッジ',
 }
+const PLAN_CAN_UPLOAD = ['light', 'standard', 'premium']
 
-function Avatar({ seed, size = 48 }) {
+function Avatar({ seed, avatarUrl, size = 48 }) {
+  if (avatarUrl) {
+    return <img src={avatarUrl} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea', objectFit: 'cover' }} />
+  }
   const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
   return <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea' }} />
 }
@@ -41,6 +38,7 @@ function Avatar({ seed, size = 48 }) {
 export default function ProfilePage() {
   const { user } = useUser()
   const navigate = useNavigate()
+  const fileInputRef = useRef(null)
 
   const [jobClasses, setJobClasses] = useState([])
   const [profile, setProfile] = useState(null)
@@ -53,7 +51,9 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [hoveredBadge, setHoveredBadge] = useState(null)
   const [usernameChangeDaysLeft, setUsernameChangeDaysLeft] = useState(null)
-  const [tab, setTab] = useState('profile') // 'profile' | 'matches'
+  const [tab, setTab] = useState('profile')
+  const [uploading, setUploading] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState(null)
 
   useEffect(() => {
     fetch(`${API}/api/job-classes`)
@@ -69,6 +69,7 @@ export default function ProfilePage() {
         if (data.data && data.data.length > 0) {
           const u = data.data[0]
           setProfile(u)
+          setAvatarUrl(u.avatar_url || null)
           setForm({
             username: u.username || '',
             bio: u.bio || '',
@@ -81,21 +82,41 @@ export default function ProfilePage() {
             const days = (Date.now() - new Date(u.username_changed_at).getTime()) / (1000 * 60 * 60 * 24)
             if (days < 30) setUsernameChangeDaysLeft(Math.ceil(30 - days))
           }
-          // マッチ一覧取得
           fetch(`${API}/api/matches?user_id=${u.id}`)
             .then(r => r.json())
-          .then(d => {
-  if (d.success && Array.isArray(d.data)) {
-    setMatches(d.data)
-  } else {
-    setMatches([])
-  }
-})
-.catch(() => setMatches([]))
+            .then(d => {
+              if (d.success && Array.isArray(d.data)) setMatches(d.data)
+              else setMatches([])
+            })
+            .catch(() => setMatches([]))
         }
         setLoading(false)
       })
   }, [user])
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file || !profile) return
+    if (!PLAN_CAN_UPLOAD.includes(profile.plan)) {
+      alert('プロフィール写真はライト以上のプランで利用できます')
+      return
+    }
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('user_id', profile.id)
+      const res = await fetch(`${API}/api/users/avatar`, { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.success) {
+        setAvatarUrl(data.avatar_url)
+        alert('写真を更新しました！')
+      } else {
+        alert(data.error || 'アップロードに失敗しました')
+      }
+    } catch { alert('通信エラー') }
+    finally { setUploading(false) }
+  }
 
   const getCurrentTitle = () => {
     if (!form.job_class_id || !form.job_rank) return null
@@ -127,12 +148,13 @@ export default function ProfilePage() {
 
   const getPartner = (match) => {
     if (!profile) return null
-    return match.user_id_1 === profile.id ? match.user2 : match.user1
+    return match.user_a_id === profile.id ? match.user2 : match.user1
   }
 
   const currentTitle = getCurrentTitle()
   const titles = profile?.titles || []
   const badges = profile?.badges || []
+  const canUpload = PLAN_CAN_UPLOAD.includes(profile?.plan)
 
   const s = {
     page: { minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' },
@@ -161,7 +183,6 @@ export default function ProfilePage() {
     <div style={s.page}>
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
 
-        {/* タブ */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem' }}>
           {[
             { key: 'profile', label: '⚙️ プロフィール' },
@@ -171,15 +192,13 @@ export default function ProfilePage() {
               flex: 1, padding: '10px', borderRadius: '10px', cursor: 'pointer',
               border: `1px solid ${tab === t.key ? '#667eea' : '#2a2a3e'}`,
               background: tab === t.key ? '#667eea22' : 'transparent',
-              color: tab === t.key ? '#667eea' : '#666', fontSize: '14px',
-              transition: 'all .2s',
+              color: tab === t.key ? '#667eea' : '#666', fontSize: '14px', transition: 'all .2s',
             }}>
               {t.label}
             </button>
           ))}
         </div>
 
-        {/* マッチ一覧タブ */}
         {tab === 'matches' && (
           <div style={s.card}>
             <div style={{ fontSize: '12px', color: '#888', letterSpacing: '2px', marginBottom: '16px' }}>💞 マッチした冒険者</div>
@@ -199,27 +218,16 @@ export default function ProfilePage() {
                     ? `${partner.job_classes.rp_prefix}${RANK_MAP[partner.job_rank] || ''}`
                     : '冒険者'
                   return (
-                    <div
-                      key={match.id}
-                      onClick={() => navigate(`/dm/${match.id}`)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '14px',
-                        padding: '14px', borderRadius: '12px', cursor: 'pointer',
-                        background: '#1a1a2e', border: '1px solid #2a2a3e',
-                        transition: 'all .2s',
-                      }}
+                    <div key={match.id} onClick={() => navigate(`/dm/${match.id}`)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', borderRadius: '12px', cursor: 'pointer', background: '#1a1a2e', border: '1px solid #2a2a3e', transition: 'all .2s' }}
                       onMouseOver={e => e.currentTarget.style.borderColor = '#667eea'}
                       onMouseOut={e => e.currentTarget.style.borderColor = '#2a2a3e'}
                     >
-                      <Avatar seed={partner.username || 'user'} size={48} />
+                      <Avatar seed={partner.username || 'user'} avatarUrl={partner.avatar_url} size={48} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 600, fontSize: '15px' }}>{partner.username}</div>
-                        <div style={{ fontSize: '12px', color: '#B4965A', marginTop: '2px' }}>
-                          {jobIcon} {rankLabel}
-                        </div>
-                        {partner.equipped_title && (
-                          <div style={{ fontSize: '11px', color: '#ff9900', marginTop: '2px' }}>🏆 {partner.equipped_title}</div>
-                        )}
+                        <div style={{ fontSize: '12px', color: '#B4965A', marginTop: '2px' }}>{jobIcon} {rankLabel}</div>
+                        {partner.equipped_title && <div style={{ fontSize: '11px', color: '#ff9900', marginTop: '2px' }}>🏆 {partner.equipped_title}</div>}
                       </div>
                       <div style={{ fontSize: '12px', color: '#555' }}>DM →</div>
                     </div>
@@ -230,7 +238,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* プロフィール編集タブ */}
         {tab === 'profile' && (
           <div style={s.card}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
@@ -239,6 +246,37 @@ export default function ProfilePage() {
                 <h1 style={{ fontSize: '1.4rem', fontWeight: 600, letterSpacing: '2px' }}>Edit Profile</h1>
                 <p style={{ color: '#666', fontSize: '12px', letterSpacing: '3px' }}>冒険者の証明</p>
               </div>
+            </div>
+
+            {/* アバター写真 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ position: 'relative', cursor: canUpload ? 'pointer' : 'default' }}
+                onClick={() => canUpload && fileInputRef.current?.click()}>
+                <Avatar seed={form.username || 'user'} avatarUrl={avatarUrl} size={80} />
+                {canUpload && (
+                  <div style={{
+                    position: 'absolute', bottom: 0, right: 0,
+                    background: '#667eea', borderRadius: '50%', width: '24px', height: '24px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px',
+                  }}>📷</div>
+                )}
+              </div>
+              <div>
+                {canUpload ? (
+                  <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                    style={{ background: 'none', border: '1px solid #667eea', borderRadius: '8px', color: '#667eea', padding: '6px 14px', cursor: 'pointer', fontSize: '13px' }}>
+                    {uploading ? 'アップロード中...' : '📷 写真を変更'}
+                  </button>
+                ) : (
+                  <div style={{ fontSize: '12px', color: '#555' }}>
+                    📷 写真アップロードは<br />
+                    <span onClick={() => navigate('/plan')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline' }}>
+                      ライト以上のプラン
+                    </span>で利用可能
+                  </div>
+                )}
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
             </div>
 
             {currentTitle && (
@@ -256,13 +294,10 @@ export default function ProfilePage() {
 
             <div style={s.field}>
               <label style={s.label}>冒険者名 / Username</label>
-              <input
-                style={{ ...s.input, borderColor: usernameChangeDaysLeft ? '#666' : '#333' }}
-                placeholder="あなたの名前を入れよ"
-                value={form.username}
+              <input style={{ ...s.input, borderColor: usernameChangeDaysLeft ? '#666' : '#333' }}
+                placeholder="あなたの名前を入れよ" value={form.username}
                 onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-                disabled={!!usernameChangeDaysLeft}
-              />
+                disabled={!!usernameChangeDaysLeft} />
               {usernameChangeDaysLeft && (
                 <div style={{ fontSize: '11px', color: '#cc3333', marginTop: '6px' }}>
                   🔒 名前変更はあと{usernameChangeDaysLeft}日後に可能です
@@ -272,7 +307,8 @@ export default function ProfilePage() {
 
             <div style={s.field}>
               <label style={s.label}>自己紹介 / Bio</label>
-              <textarea style={s.textarea} placeholder="汝の使命を語れ..." value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} />
+              <textarea style={s.textarea} placeholder="汝の使命を語れ..." value={form.bio}
+                onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} />
             </div>
 
             <div style={s.divider} />
@@ -281,7 +317,8 @@ export default function ProfilePage() {
               <label style={s.label}>職業クラス / Job Class</label>
               <div style={s.classGrid}>
                 {jobClasses.map(job => (
-                  <div key={job.id} style={s.classCard(form.job_class_id === job.id)} onClick={() => setForm(f => ({ ...f, job_class_id: job.id }))}>
+                  <div key={job.id} style={s.classCard(form.job_class_id === job.id)}
+                    onClick={() => setForm(f => ({ ...f, job_class_id: job.id }))}>
                     <div style={{ fontSize: '1.8rem' }}>{job.icon}</div>
                     <div style={{ fontSize: '11px', fontWeight: 500, marginTop: '4px', color: form.job_class_id === job.id ? '#B4965A' : 'white' }}>{job.name}</div>
                     <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>{job.rp_prefix}皇〜{job.rp_prefix}の人</div>
@@ -294,7 +331,8 @@ export default function ProfilePage() {
               <label style={s.label}>ランク / Rank</label>
               <div style={s.rankGrid}>
                 {RANKS.map(r => (
-                  <div key={r.value} style={s.rankBtn(form.job_rank === r.value)} onClick={() => setForm(f => ({ ...f, job_rank: r.value }))}>
+                  <div key={r.value} style={s.rankBtn(form.job_rank === r.value)}
+                    onClick={() => setForm(f => ({ ...f, job_rank: r.value }))}>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: form.job_rank === r.value ? '#B4965A' : 'white' }}>{r.label}</div>
                   </div>
                 ))}
@@ -307,7 +345,8 @@ export default function ProfilePage() {
               <label style={s.label}>性別 / Gender</label>
               <div style={s.genderRow}>
                 {GENDERS.map(g => (
-                  <div key={g.value} style={s.genderBtn(form.gender === g.value)} onClick={() => setForm(f => ({ ...f, gender: g.value }))}>
+                  <div key={g.value} style={s.genderBtn(form.gender === g.value)}
+                    onClick={() => setForm(f => ({ ...f, gender: g.value }))}>
                     {g.label}
                   </div>
                 ))}
@@ -322,25 +361,12 @@ export default function ProfilePage() {
                   <p style={{ fontSize: '11px', color: '#666', marginBottom: '10px' }}>バッジにカーソルを当てると説明が表示されます</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {badges.map((b, i) => (
-                      <div key={i}
-                        onMouseEnter={() => setHoveredBadge(i)}
-                        onMouseLeave={() => setHoveredBadge(null)}
-                        style={{
-                          position: 'relative',
-                          background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22',
-                          border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`,
-                          borderRadius: '10px', padding: '8px 14px',
-                          display: 'flex', alignItems: 'center', gap: '6px', cursor: 'default',
-                        }}>
+                      <div key={i} onMouseEnter={() => setHoveredBadge(i)} onMouseLeave={() => setHoveredBadge(null)}
+                        style={{ position: 'relative', background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`, borderRadius: '10px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'default' }}>
                         <span style={{ fontSize: '20px' }}>{b.icon}</span>
                         <span style={{ fontSize: '10px', color: '#666' }}>Rarity {b.rarity}</span>
                         {hoveredBadge === i && (
-                          <div style={{
-                            position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)',
-                            background: '#0f0f1a', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`,
-                            borderRadius: '8px', padding: '6px 12px',
-                            fontSize: '11px', color: 'white', whiteSpace: 'nowrap', zIndex: 10, pointerEvents: 'none',
-                          }}>
+                          <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', background: '#0f0f1a', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`, borderRadius: '8px', padding: '6px 12px', fontSize: '11px', color: 'white', whiteSpace: 'nowrap', zIndex: 10, pointerEvents: 'none' }}>
                             {b.label}の証明<br />
                             <span style={{ color: '#888' }}>{BADGE_DESC[b.icon] || 'スキル証明バッジ'}</span>
                           </div>
@@ -359,26 +385,15 @@ export default function ProfilePage() {
                   <label style={s.label}>🏆 獲得称号 / Titles</label>
                   <p style={{ fontSize: '11px', color: '#666', marginBottom: '10px' }}>称号をタップして装備できます</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    <div
-                      onClick={() => setForm(f => ({ ...f, equipped_title: null }))}
-                      style={{
-                        background: !form.equipped_title ? '#1a1a2e' : 'transparent',
-                        border: `1px solid ${!form.equipped_title ? '#888' : '#333'}`,
-                        borderRadius: '99px', padding: '4px 12px', cursor: 'pointer',
-                      }}>
+                    <div onClick={() => setForm(f => ({ ...f, equipped_title: null }))}
+                      style={{ background: !form.equipped_title ? '#1a1a2e' : 'transparent', border: `1px solid ${!form.equipped_title ? '#888' : '#333'}`, borderRadius: '99px', padding: '4px 12px', cursor: 'pointer' }}>
                       <span style={{ fontSize: '12px', color: '#888' }}>なし</span>
                     </div>
                     {titles.map((t, i) => {
                       const isEquipped = form.equipped_title === t.value
                       return (
-                        <div key={i}
-                          onClick={() => setForm(f => ({ ...f, equipped_title: isEquipped ? null : t.value }))}
-                          style={{
-                            background: isEquipped ? (RARITY_COLOR[t.rarity] || '#4CAF50') + '33' : (RARITY_COLOR[t.rarity] || '#4CAF50') + '11',
-                            border: `1px solid ${isEquipped ? (RARITY_COLOR[t.rarity] || '#4CAF50') : (RARITY_COLOR[t.rarity] || '#4CAF50') + '55'}`,
-                            borderRadius: '99px', padding: '4px 12px',
-                            display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all .2s',
-                          }}>
+                        <div key={i} onClick={() => setForm(f => ({ ...f, equipped_title: isEquipped ? null : t.value }))}
+                          style={{ background: isEquipped ? (RARITY_COLOR[t.rarity] || '#4CAF50') + '33' : (RARITY_COLOR[t.rarity] || '#4CAF50') + '11', border: `1px solid ${isEquipped ? (RARITY_COLOR[t.rarity] || '#4CAF50') : (RARITY_COLOR[t.rarity] || '#4CAF50') + '55'}`, borderRadius: '99px', padding: '4px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all .2s' }}>
                           {isEquipped && <span style={{ fontSize: '10px' }}>✅</span>}
                           <span style={{ fontSize: '12px', fontWeight: isEquipped ? 600 : 400, color: RARITY_COLOR[t.rarity] || '#4CAF50' }}>{t.value}</span>
                           <span style={{ fontSize: '10px', color: RARITY_COLOR[t.rarity] || '#4CAF50', opacity: 0.8 }}>{t.rarity}</span>
