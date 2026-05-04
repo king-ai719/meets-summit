@@ -37,6 +37,8 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true)
   const [hoveredBadge, setHoveredBadge] = useState(null)
   const [liking, setLiking] = useState(false)
+  const [limitError, setLimitError] = useState(null)
+  const [remaining, setRemaining] = useState(null)
 
   useEffect(() => {
     fetch(`${API}/api/users/${user_id}/profile`)
@@ -60,17 +62,28 @@ export default function PublicProfilePage() {
 
   const handleLike = async (type) => {
     if (!myProfile || liking) return
-    if (myProfile.id === user_id) return // 自分にはいいねできない
+    if (myProfile.id === user_id) return
     setLiking(true)
+    setLimitError(null)
     try {
-      await fetch(`${API}/api/profile-likes`, {
+      const res = await fetch(`${API}/api/profile-likes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ from_user_id: myProfile.id, to_user_id: user_id, like_type: type }),
       })
-      // いいね数を再取得
-      const res = await fetch(`${API}/api/profile-likes?to_user_id=${user_id}&from_user_id=${myProfile.id}`)
-      const data = await res.json()
+      const result = await res.json()
+
+      if (!result.success && result.limit_reached) {
+        setLimitError(result.error)
+        return
+      }
+
+      if (result.remaining !== undefined && result.remaining !== null) {
+        setRemaining(result.remaining)
+      }
+
+      const r2 = await fetch(`${API}/api/profile-likes?to_user_id=${user_id}&from_user_id=${myProfile.id}`)
+      const data = await r2.json()
       if (data.success) setLikes(data)
     } catch { }
     finally { setLiking(false) }
@@ -100,7 +113,6 @@ export default function PublicProfilePage() {
 
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem', marginBottom: '1.5rem' }}>←</button>
 
-        {/* プロフィールカード */}
         <div style={{ background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '16px', padding: '2rem', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
             <Avatar seed={targetProfile.username || 'user'} size={80} />
@@ -125,35 +137,61 @@ export default function PublicProfilePage() {
             </div>
           )}
 
-          {/* いいねボタン */}
           {!isMe && user && (
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-              <button
-                onClick={() => handleLike('love')}
-                disabled={liking}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '10px', cursor: 'pointer', fontSize: '1.2rem',
-                  background: likes.my_like === 'love' ? '#ff444422' : '#1a1a2e',
-                  border: `1px solid ${likes.my_like === 'love' ? '#ff4444' : '#2a2a3e'}`,
-                  color: 'white', transition: 'all .2s',
+            <>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button
+                  onClick={() => handleLike('love')}
+                  disabled={liking}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem',
+                    background: likes.my_like === 'love' ? '#ff444422' : '#1a1a2e',
+                    border: `1px solid ${likes.my_like === 'love' ? '#ff4444' : '#2a2a3e'}`,
+                    color: 'white', transition: 'all .2s',
+                    opacity: liking ? 0.6 : 1,
+                  }}>
+                  ❤️ {likes.love_count}
+                </button>
+                <button
+                  onClick={() => handleLike('broken')}
+                  disabled={liking}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem',
+                    background: likes.my_like === 'broken' ? '#66666622' : '#1a1a2e',
+                    border: `1px solid ${likes.my_like === 'broken' ? '#888' : '#2a2a3e'}`,
+                    color: 'white', transition: 'all .2s',
+                    opacity: liking ? 0.6 : 1,
+                  }}>
+                  💔 {likes.broken_count}
+                </button>
+              </div>
+
+              {limitError && (
+                <div style={{
+                  marginTop: '10px', padding: '10px 14px', borderRadius: '10px',
+                  background: '#ff444415', border: '1px solid #ff444466',
+                  fontSize: '12px', color: '#ff8888', textAlign: 'center', lineHeight: 1.5,
                 }}>
-                ❤️ {likes.love_count}
-              </button>
-              <button
-                onClick={() => handleLike('broken')}
-                disabled={liking}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '10px', cursor: 'pointer', fontSize: '1.2rem',
-                  background: likes.my_like === 'broken' ? '#66666622' : '#1a1a2e',
-                  border: `1px solid ${likes.my_like === 'broken' ? '#888' : '#2a2a3e'}`,
-                  color: 'white', transition: 'all .2s',
-                }}>
-                💔 {likes.broken_count}
-              </button>
-            </div>
+                  ⚠️ {limitError}
+                  <div style={{ marginTop: '6px' }}>
+                    <span
+                      onClick={() => navigate('/plan')}
+                      style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', fontSize: '11px' }}
+                    >
+                      プランをアップグレード →
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {remaining !== null && !limitError && (
+                <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '12px', color: '#555' }}>
+                  本日の残りいいね: {remaining}回
+                </div>
+              )}
+            </>
           )}
 
-          {/* 自分のプロフィールの場合 */}
           {isMe && (
             <div style={{ textAlign: 'center', color: '#666', fontSize: '13px' }}>
               ❤️ {likes.love_count} / 💔 {likes.broken_count}
@@ -161,7 +199,6 @@ export default function PublicProfilePage() {
           )}
         </div>
 
-        {/* バッジ */}
         {badges.length > 0 && (
           <div style={{ background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '16px', padding: '1.5rem', marginBottom: '1rem' }}>
             <div style={{ fontSize: '12px', color: '#888', letterSpacing: '2px', marginBottom: '12px' }}>🎖️ スキル証明バッジ</div>
@@ -196,7 +233,6 @@ export default function PublicProfilePage() {
           </div>
         )}
 
-        {/* 称号 */}
         {titles.length > 0 && (
           <div style={{ background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '16px', padding: '1.5rem' }}>
             <div style={{ fontSize: '12px', color: '#888', letterSpacing: '2px', marginBottom: '12px' }}>🏆 獲得称号</div>

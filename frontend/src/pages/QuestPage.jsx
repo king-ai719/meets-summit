@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
 
@@ -38,6 +38,10 @@ export default function QuestPage({ bgm }) {
   const [reward, setReward] = useState(null)
   const [generating, setGenerating] = useState(false)
   const [clearers, setClearers] = useState([])
+
+  // refでwrongCountの最新値を保持（stale closure対策）
+  const wrongCountRef = useRef(0)
+  const livesRef = useRef(3)
 
   useEffect(() => {
     if (!user) return
@@ -105,19 +109,12 @@ export default function QuestPage({ bgm }) {
         bgm.play('battle')
       }
     }
-    if (phase === 'cleared') {
-      bgm.play('fanfare')
-    }
-    if (phase === 'gameover') {
-      bgm.stop()
-    }
+    if (phase === 'cleared') bgm.play('fanfare')
+    if (phase === 'gameover') bgm.stop()
   }, [phase, quest])
 
-  // ページ離脱時にトップBGMに戻す
   useEffect(() => {
-    return () => {
-      if (bgm) bgm.play('top')
-    }
+    return () => { if (bgm) bgm.play('top') }
   }, [])
 
   useEffect(() => {
@@ -148,12 +145,14 @@ export default function QuestPage({ bgm }) {
   }
 
   const handleWrong = () => {
-    const newLives = lives - 1
+    const newLives = livesRef.current - 1
+    livesRef.current = newLives
+    wrongCountRef.current = wrongCountRef.current + 1
     setLives(newLives)
-    setWrongCount(prev => prev + 1)
+    setWrongCount(wrongCountRef.current)
     if (newLives <= 0) {
       setPhase('gameover')
-      saveResult(false)
+      saveResult(false, wrongCountRef.current)
     } else {
       setPhase('wrong')
     }
@@ -162,7 +161,7 @@ export default function QuestPage({ bgm }) {
   const handleNext = () => {
     if (current + 1 >= questions.length) {
       setPhase('cleared')
-      saveResult(true)
+      saveResult(true, wrongCountRef.current)
     } else {
       setCurrent(prev => prev + 1)
       setSelected(null)
@@ -175,38 +174,42 @@ export default function QuestPage({ bgm }) {
     setPhase('playing')
   }
 
-  const saveResult = async (cleared) => {
+  const saveResult = async (cleared, finalWrongCount) => {
     if (!profile) return
-    await fetch(`${API}/api/quest-results`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        quest_id,
-        user_id: profile.id,
-        is_cleared: cleared,
-        wrong_count: wrongCount,
-      }),
-    })
-    if (cleared) {
-      fetch(`${API}/api/quests/${quest_id}/results`)
-        .then(res => res.json())
-        .then(data => setClearers(Array.isArray(data.data) ? data.data : []))
-    }
-    if (cleared && quest?.reward_value) {
-      const res = await fetch(`${API}/api/users/reward`, {
+    try {
+      await fetch(`${API}/api/quest-results`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          quest_id,
           user_id: profile.id,
-          reward_type: quest.reward_type || 'title',
-          reward_value: quest.reward_value,
-          reward_rarity: quest.reward_rarity || 'C',
+          is_cleared: cleared,
+          wrong_count: finalWrongCount,
         }),
       })
-      const data = await res.json()
-      if (data.success && !data.already_owned) {
-        setReward({ value: quest.reward_value, rarity: quest.reward_rarity || 'C' })
+      if (cleared) {
+        fetch(`${API}/api/quests/${quest_id}/results`)
+          .then(res => res.json())
+          .then(data => setClearers(Array.isArray(data.data) ? data.data : []))
       }
+      if (cleared && quest?.reward_value) {
+        const res = await fetch(`${API}/api/users/reward`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: profile.id,
+            reward_type: quest.reward_type || 'title',
+            reward_value: quest.reward_value,
+            reward_rarity: quest.reward_rarity || 'C',
+          }),
+        })
+        const data = await res.json()
+        if (data.success && !data.already_owned) {
+          setReward({ value: quest.reward_value, rarity: quest.reward_rarity || 'C' })
+        }
+      }
+    } catch (e) {
+      console.error('saveResult error:', e)
     }
   }
 
@@ -252,12 +255,12 @@ export default function QuestPage({ bgm }) {
           <p style={{ color: '#888', marginBottom: '1.5rem' }}>チャットが解放されました！</p>
 
           {reward && (
-            <div style={{ background: '#1a1a2e', border: `1px solid ${RARITY_COLOR[reward.rarity]}`, borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div style={{ background: '#1a1a2e', border: `1px solid ${RARITY_COLOR[reward.rarity] || '#4CAF50'}`, borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
               <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>🏆 報酬獲得！</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 600, color: RARITY_COLOR[reward.rarity], marginBottom: '4px' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: 600, color: RARITY_COLOR[reward.rarity] || '#4CAF50', marginBottom: '4px' }}>
                 称号「{reward.value}」
               </div>
-              <div style={{ fontSize: '12px', background: RARITY_COLOR[reward.rarity] + '33', border: `1px solid ${RARITY_COLOR[reward.rarity]}`, borderRadius: '99px', padding: '2px 10px', display: 'inline-block', color: RARITY_COLOR[reward.rarity] }}>
+              <div style={{ fontSize: '12px', background: (RARITY_COLOR[reward.rarity] || '#4CAF50') + '33', border: `1px solid ${RARITY_COLOR[reward.rarity] || '#4CAF50'}`, borderRadius: '99px', padding: '2px 10px', display: 'inline-block', color: RARITY_COLOR[reward.rarity] || '#4CAF50' }}>
                 Rarity {reward.rarity}
               </div>
             </div>
