@@ -92,7 +92,7 @@ export default function JobClassPage() {
         </SignedOut>
         <SignedIn>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <Avatar seed={user?.id || 'default'} size={60} badge={getBadge()} />
+            <Avatar seed={profile?.username || user?.id || 'default'} size={60} badge={getBadge()} />
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontWeight: 'bold' }}>{profile?.username || user?.firstName || '冒険者'}</div>
               <div style={{ fontSize: '0.85rem', color: '#B4965A' }}>{getTitle()}</div>
