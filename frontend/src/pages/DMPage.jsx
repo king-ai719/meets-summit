@@ -41,7 +41,7 @@ export default function DMPage() {
         if (d.success) {
           const match = d.data.find(m => m.id === match_id)
           if (match) {
-            const p = match.user_id_1 === myProfile.id ? match.user2 : match.user1
+            const p = match.user_a_id === myProfile.id ? match.user2 : match.user1
             setPartner(p)
           }
         }
@@ -160,7 +160,7 @@ export default function DMPage() {
                   {msg.content}
                 </div>
                 <div style={{ fontSize: '10px', color: '#555', marginTop: '4px', textAlign: isMe ? 'right' : 'left', paddingLeft: isMe ? 0 : '4px', paddingRight: isMe ? '4px' : 0 }}>
-                  {new Date(msg.created_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(msg.sent_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
             </div>
