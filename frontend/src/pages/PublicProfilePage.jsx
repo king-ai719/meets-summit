@@ -5,23 +5,21 @@ import { useUser } from '@clerk/clerk-react'
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
 const RARITY_COLOR = {
-  S: '#ff4444',
-  A: '#ff9900',
-  B: '#667eea',
-  C: '#4CAF50',
+  S: '#ff4444', A: '#ff9900', B: '#667eea', C: '#4CAF50',
 }
-
 const RANK_LABEL = {
   hito: 'の人', shi: '士', shou: '将', ou: '王', kou: '皇'
 }
-
 const BADGE_DESC = {
   '🗡️': '基礎知識を証明するバッジ',
   '⚔️': '専門知識を証明するバッジ',
   '💀': 'マスターレベルを証明するバッジ',
 }
 
-function Avatar({ seed, size = 80 }) {
+function Avatar({ seed, avatarUrl, size = 80 }) {
+  if (avatarUrl) {
+    return <img src={avatarUrl} width={size} height={size} style={{ borderRadius: '50%', border: '3px solid #667eea', objectFit: 'cover' }} />
+  }
   const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
   return <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '3px solid #667eea' }} />
 }
@@ -74,21 +72,16 @@ export default function PublicProfilePage() {
         body: JSON.stringify({ from_user_id: myProfile.id, to_user_id: user_id, like_type: type }),
       })
       const result = await res.json()
-
       if (!result.success && result.limit_reached) {
         setLimitError(result.error)
         return
       }
-
       if (result.remaining !== undefined && result.remaining !== null) {
         setRemaining(result.remaining)
       }
-
-      // マッチ通知
       if (result.matched) {
         setMatchNotice(true)
       }
-
       const r2 = await fetch(`${API}/api/profile-likes?to_user_id=${user_id}&from_user_id=${myProfile.id}`)
       const data = await r2.json()
       if (data.success) setLikes(data)
@@ -120,29 +113,20 @@ export default function PublicProfilePage() {
 
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem', marginBottom: '1.5rem' }}>←</button>
 
-        {/* マッチ通知バナー */}
         {matchNotice && (
-          <div style={{
-            background: '#667eea22', border: '1px solid #667eea',
-            borderRadius: '12px', padding: '14px 18px', marginBottom: '1rem',
-            textAlign: 'center', fontSize: '14px',
-          }}>
+          <div style={{ background: '#667eea22', border: '1px solid #667eea', borderRadius: '12px', padding: '14px 18px', marginBottom: '1rem', textAlign: 'center', fontSize: '14px' }}>
             <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>💞</div>
             <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>マッチしました！</div>
             <div style={{ fontSize: '12px', color: '#888', marginBottom: '10px' }}>プロフィールのマッチタブからDMできます</div>
-            <button
-              onClick={() => navigate('/profile')}
-              style={{ background: '#667eea', border: 'none', borderRadius: '8px', color: 'white', padding: '6px 16px', cursor: 'pointer', fontSize: '12px' }}
-            >
+            <button onClick={() => navigate('/profile')} style={{ background: '#667eea', border: 'none', borderRadius: '8px', color: 'white', padding: '6px 16px', cursor: 'pointer', fontSize: '12px' }}>
               マッチタブを見る →
             </button>
           </div>
         )}
 
-        {/* プロフィールカード */}
         <div style={{ background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '16px', padding: '2rem', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
-            <Avatar seed={targetProfile.username || 'user'} size={80} />
+            <Avatar seed={targetProfile.username || 'user'} avatarUrl={targetProfile.avatar_url} size={80} />
             <div>
               <div style={{ fontSize: '1.4rem', fontWeight: 700 }}>{targetProfile.username}</div>
               <div style={{ fontSize: '14px', color: '#B4965A', marginTop: '4px' }}>
@@ -167,36 +151,16 @@ export default function PublicProfilePage() {
           {!isMe && user && (
             <>
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                <button
-                  onClick={() => handleLike('love')}
-                  disabled={liking}
-                  style={{
-                    flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem',
-                    background: likes.my_like === 'love' ? '#ff444422' : '#1a1a2e',
-                    border: `1px solid ${likes.my_like === 'love' ? '#ff4444' : '#2a2a3e'}`,
-                    color: 'white', transition: 'all .2s', opacity: liking ? 0.6 : 1,
-                  }}>
+                <button onClick={() => handleLike('love')} disabled={liking} style={{ flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem', background: likes.my_like === 'love' ? '#ff444422' : '#1a1a2e', border: `1px solid ${likes.my_like === 'love' ? '#ff4444' : '#2a2a3e'}`, color: 'white', transition: 'all .2s', opacity: liking ? 0.6 : 1 }}>
                   ❤️ {likes.love_count}
                 </button>
-                <button
-                  onClick={() => handleLike('broken')}
-                  disabled={liking}
-                  style={{
-                    flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem',
-                    background: likes.my_like === 'broken' ? '#66666622' : '#1a1a2e',
-                    border: `1px solid ${likes.my_like === 'broken' ? '#888' : '#2a2a3e'}`,
-                    color: 'white', transition: 'all .2s', opacity: liking ? 0.6 : 1,
-                  }}>
+                <button onClick={() => handleLike('broken')} disabled={liking} style={{ flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem', background: likes.my_like === 'broken' ? '#66666622' : '#1a1a2e', border: `1px solid ${likes.my_like === 'broken' ? '#888' : '#2a2a3e'}`, color: 'white', transition: 'all .2s', opacity: liking ? 0.6 : 1 }}>
                   💔 {likes.broken_count}
                 </button>
               </div>
 
               {limitError && (
-                <div style={{
-                  marginTop: '10px', padding: '10px 14px', borderRadius: '10px',
-                  background: '#ff444415', border: '1px solid #ff444466',
-                  fontSize: '12px', color: '#ff8888', textAlign: 'center', lineHeight: 1.5,
-                }}>
+                <div style={{ marginTop: '10px', padding: '10px 14px', borderRadius: '10px', background: '#ff444415', border: '1px solid #ff444466', fontSize: '12px', color: '#ff8888', textAlign: 'center', lineHeight: 1.5 }}>
                   ⚠️ {limitError}
                   <div style={{ marginTop: '6px' }}>
                     <span onClick={() => navigate('/plan')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', fontSize: '11px' }}>
@@ -229,22 +193,11 @@ export default function PublicProfilePage() {
                 <div key={i}
                   onMouseEnter={() => setHoveredBadge(i)}
                   onMouseLeave={() => setHoveredBadge(null)}
-                  style={{
-                    position: 'relative',
-                    background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22',
-                    border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`,
-                    borderRadius: '10px', padding: '8px 14px',
-                    display: 'flex', alignItems: 'center', gap: '6px', cursor: 'default',
-                  }}>
+                  style={{ position: 'relative', background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`, borderRadius: '10px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'default' }}>
                   <span style={{ fontSize: '20px' }}>{b.icon}</span>
                   <span style={{ fontSize: '10px', color: '#666' }}>Rarity {b.rarity}</span>
                   {hoveredBadge === i && (
-                    <div style={{
-                      position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)',
-                      background: '#0f0f1a', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`,
-                      borderRadius: '8px', padding: '6px 12px',
-                      fontSize: '11px', color: 'white', whiteSpace: 'nowrap', zIndex: 10, pointerEvents: 'none',
-                    }}>
+                    <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', background: '#0f0f1a', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`, borderRadius: '8px', padding: '6px 12px', fontSize: '11px', color: 'white', whiteSpace: 'nowrap', zIndex: 10, pointerEvents: 'none' }}>
                       {b.label}の証明<br />
                       <span style={{ color: '#888' }}>{BADGE_DESC[b.icon] || 'スキル証明バッジ'}</span>
                     </div>
@@ -260,12 +213,7 @@ export default function PublicProfilePage() {
             <div style={{ fontSize: '12px', color: '#888', letterSpacing: '2px', marginBottom: '12px' }}>🏆 獲得称号</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {titles.map((t, i) => (
-                <div key={i} style={{
-                  background: (RARITY_COLOR[t.rarity] || '#4CAF50') + '22',
-                  border: `1px solid ${RARITY_COLOR[t.rarity] || '#4CAF50'}55`,
-                  borderRadius: '99px', padding: '4px 12px',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                }}>
+                <div key={i} style={{ background: (RARITY_COLOR[t.rarity] || '#4CAF50') + '22', border: `1px solid ${RARITY_COLOR[t.rarity] || '#4CAF50'}55`, borderRadius: '99px', padding: '4px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {targetProfile.equipped_title === t.value && <span style={{ fontSize: '10px' }}>✅</span>}
                   <span style={{ fontSize: '12px', color: RARITY_COLOR[t.rarity] || '#4CAF50' }}>{t.value}</span>
                   <span style={{ fontSize: '10px', color: RARITY_COLOR[t.rarity] || '#4CAF50', opacity: 0.7 }}>{t.rarity}</span>
