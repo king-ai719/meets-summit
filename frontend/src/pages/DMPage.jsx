@@ -10,8 +10,14 @@ function Avatar({ seed, avatarUrl, size = 36 }) {
   if (avatarUrl) {
     return <img src={avatarUrl} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea', flexShrink: 0, objectFit: 'cover' }} />
   }
-  const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
-  return <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea', flexShrink: 0 }} />
+  const icons = ['🌻', '🌸', '🌺', '🌹', '🌼', '🌷', '🍀', '🌈', '⭐', '🎀']
+  const bgColors = ['#1a1a2e', '#1a160a', '#0f1a1a', '#1a0f1a', '#0f0f1a', '#1a1a0f']
+  const idx = Math.abs((seed || 'user').split('').reduce((a, c) => a + c.charCodeAt(0), 0))
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', border: '2px solid #667eea', background: bgColors[idx % bgColors.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5, flexShrink: 0 }}>
+      {icons[idx % icons.length]}
+    </div>
+  )
 }
 
 export default function DMPage() {

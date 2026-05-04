@@ -30,10 +30,18 @@ const PLAN_CAN_SEE_LIKERS = ['standard', 'premium']
 
 function Avatar({ seed, avatarUrl, size = 48 }) {
   if (avatarUrl) {
-    return <img src={avatarUrl} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea', objectFit: 'cover' }} />
+    return <img src={avatarUrl} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea', objectFit: 'cover', flexShrink: 0 }} />
   }
-  const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
-  return <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea' }} />
+  const icons = ['🌻', '🌸', '🌺', '🌹', '🌼', '🌷', '🍀', '🌈', '⭐', '🎀']
+  const bgColors = ['#1a1a2e', '#1a160a', '#0f1a1a', '#1a0f1a', '#0f0f1a', '#1a1a0f']
+  const idx = Math.abs((seed || 'user').split('').reduce((a, c) => a + c.charCodeAt(0), 0))
+  const icon = icons[idx % icons.length]
+  const bg = bgColors[idx % bgColors.length]
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', border: '2px solid #667eea', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5, flexShrink: 0 }}>
+      {icon}
+    </div>
+  )
 }
 
 export default function ProfilePage() {
@@ -91,14 +99,10 @@ export default function ProfilePage() {
               else setMatches([])
             })
             .catch(() => setMatches([]))
-
-          // いいね受信一覧（standard以上）
           if (PLAN_CAN_SEE_LIKERS.includes(u.plan)) {
             fetch(`${API}/api/profile-likes/received?user_id=${u.id}&plan=${u.plan}`)
               .then(r => r.json())
-              .then(d => {
-                if (d.success && Array.isArray(d.data)) setLikers(d.data)
-              })
+              .then(d => { if (d.success && Array.isArray(d.data)) setLikers(d.data) })
               .catch(() => {})
           }
         }
@@ -120,12 +124,8 @@ export default function ProfilePage() {
       formData.append('user_id', profile.id)
       const res = await fetch(`${API}/api/users/avatar`, { method: 'POST', body: formData })
       const data = await res.json()
-      if (data.success) {
-        setAvatarUrl(data.avatar_url)
-        alert('写真を更新しました！')
-      } else {
-        alert(data.error || 'アップロードに失敗しました')
-      }
+      if (data.success) { setAvatarUrl(data.avatar_url); alert('写真を更新しました！') }
+      else alert(data.error || 'アップロードに失敗しました')
     } catch { alert('通信エラー') }
     finally { setUploading(false) }
   }
@@ -148,12 +148,8 @@ export default function ProfilePage() {
         body: JSON.stringify({ ...form, clerk_id: user.id, email: user.primaryEmailAddress?.emailAddress }),
       })
       const data = await res.json()
-      if (data.success) {
-        setSaved(true)
-        setTimeout(() => navigate('/guilds'), 1500)
-      } else {
-        alert(data.error || '保存に失敗しました')
-      }
+      if (data.success) { setSaved(true); setTimeout(() => navigate('/guilds'), 1500) }
+      else alert(data.error || '保存に失敗しました')
     } catch { alert('通信エラー') }
     finally { setSaving(false) }
   }
@@ -187,15 +183,12 @@ export default function ProfilePage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-      読み込み中...
-    </div>
+    <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>読み込み中...</div>
   )
 
   return (
     <div style={s.page}>
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-
         <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem' }}>
           {[
             { key: 'profile', label: '⚙️ プロフィール' },
@@ -206,9 +199,7 @@ export default function ProfilePage() {
               border: `1px solid ${tab === t.key ? '#667eea' : '#2a2a3e'}`,
               background: tab === t.key ? '#667eea22' : 'transparent',
               color: tab === t.key ? '#667eea' : '#666', fontSize: '14px', transition: 'all .2s',
-            }}>
-              {t.label}
-            </button>
+            }}>{t.label}</button>
           ))}
         </div>
 
@@ -227,15 +218,12 @@ export default function ProfilePage() {
                   const partner = getPartner(match)
                   if (!partner) return null
                   const jobIcon = partner.job_classes?.icon || '⚔️'
-                  const rankLabel = partner.job_classes?.rp_prefix
-                    ? `${partner.job_classes.rp_prefix}${RANK_MAP[partner.job_rank] || ''}`
-                    : '冒険者'
+                  const rankLabel = partner.job_classes?.rp_prefix ? `${partner.job_classes.rp_prefix}${RANK_MAP[partner.job_rank] || ''}` : '冒険者'
                   return (
                     <div key={match.id} onClick={() => navigate(`/dm/${match.id}`)}
                       style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', borderRadius: '12px', cursor: 'pointer', background: '#1a1a2e', border: '1px solid #2a2a3e', transition: 'all .2s' }}
                       onMouseOver={e => e.currentTarget.style.borderColor = '#667eea'}
-                      onMouseOut={e => e.currentTarget.style.borderColor = '#2a2a3e'}
-                    >
+                      onMouseOut={e => e.currentTarget.style.borderColor = '#2a2a3e'}>
                       <Avatar seed={partner.username || 'user'} avatarUrl={partner.avatar_url} size={48} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 600, fontSize: '15px' }}>{partner.username}</div>
@@ -261,7 +249,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* アバター写真 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
               <div style={{ position: 'relative', cursor: canUpload ? 'pointer' : 'default' }}
                 onClick={() => canUpload && fileInputRef.current?.click()}>
@@ -290,12 +277,7 @@ export default function ProfilePage() {
               <div style={{ background: '#1a160a', border: '1px solid #B4965A33', borderRadius: '10px', padding: '12px 16px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ fontSize: '12px', color: '#888' }}>職業称号</span>
                 <span style={{ fontSize: '16px', fontWeight: 600, color: '#B4965A' }}>{currentTitle}</span>
-                {form.equipped_title && (
-                  <>
-                    <span style={{ fontSize: '12px', color: '#666' }}>｜ 装備中</span>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#ff9900' }}>🏆 {form.equipped_title}</span>
-                  </>
-                )}
+                {form.equipped_title && (<><span style={{ fontSize: '12px', color: '#666' }}>｜ 装備中</span><span style={{ fontSize: '14px', fontWeight: 600, color: '#ff9900' }}>🏆 {form.equipped_title}</span></>)}
               </div>
             )}
 
@@ -305,15 +287,12 @@ export default function ProfilePage() {
                 placeholder="あなたの名前を入れよ" value={form.username}
                 onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
                 disabled={!!usernameChangeDaysLeft} />
-              {usernameChangeDaysLeft && (
-                <div style={{ fontSize: '11px', color: '#cc3333', marginTop: '6px' }}>🔒 名前変更はあと{usernameChangeDaysLeft}日後に可能です</div>
-              )}
+              {usernameChangeDaysLeft && <div style={{ fontSize: '11px', color: '#cc3333', marginTop: '6px' }}>🔒 名前変更はあと{usernameChangeDaysLeft}日後に可能です</div>}
             </div>
 
             <div style={s.field}>
               <label style={s.label}>自己紹介 / Bio</label>
-              <textarea style={s.textarea} placeholder="汝の使命を語れ..." value={form.bio}
-                onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} />
+              <textarea style={s.textarea} placeholder="汝の使命を語れ..." value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} />
             </div>
 
             <div style={s.divider} />
@@ -322,8 +301,7 @@ export default function ProfilePage() {
               <label style={s.label}>職業クラス / Job Class</label>
               <div style={s.classGrid}>
                 {jobClasses.map(job => (
-                  <div key={job.id} style={s.classCard(form.job_class_id === job.id)}
-                    onClick={() => setForm(f => ({ ...f, job_class_id: job.id }))}>
+                  <div key={job.id} style={s.classCard(form.job_class_id === job.id)} onClick={() => setForm(f => ({ ...f, job_class_id: job.id }))}>
                     <div style={{ fontSize: '1.8rem' }}>{job.icon}</div>
                     <div style={{ fontSize: '11px', fontWeight: 500, marginTop: '4px', color: form.job_class_id === job.id ? '#B4965A' : 'white' }}>{job.name}</div>
                     <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>{job.rp_prefix}皇〜{job.rp_prefix}の人</div>
@@ -336,8 +314,7 @@ export default function ProfilePage() {
               <label style={s.label}>ランク / Rank</label>
               <div style={s.rankGrid}>
                 {RANKS.map(r => (
-                  <div key={r.value} style={s.rankBtn(form.job_rank === r.value)}
-                    onClick={() => setForm(f => ({ ...f, job_rank: r.value }))}>
+                  <div key={r.value} style={s.rankBtn(form.job_rank === r.value)} onClick={() => setForm(f => ({ ...f, job_rank: r.value }))}>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: form.job_rank === r.value ? '#B4965A' : 'white' }}>{r.label}</div>
                   </div>
                 ))}
@@ -350,15 +327,11 @@ export default function ProfilePage() {
               <label style={s.label}>性別 / Gender</label>
               <div style={s.genderRow}>
                 {GENDERS.map(g => (
-                  <div key={g.value} style={s.genderBtn(form.gender === g.value)}
-                    onClick={() => setForm(f => ({ ...f, gender: g.value }))}>
-                    {g.label}
-                  </div>
+                  <div key={g.value} style={s.genderBtn(form.gender === g.value)} onClick={() => setForm(f => ({ ...f, gender: g.value }))}>{g.label}</div>
                 ))}
               </div>
             </div>
 
-            {/* いいね受信一覧（standard以上） */}
             {canSeeLikers && (
               <>
                 <div style={s.divider} />
@@ -371,15 +344,12 @@ export default function ProfilePage() {
                       {likers.map((like, i) => {
                         const u = like.users
                         if (!u) return null
-                        const rankLabel = u.job_classes?.rp_prefix
-                          ? `${u.job_classes.rp_prefix}${RANK_MAP[u.job_rank] || ''}`
-                          : '冒険者'
+                        const rankLabel = u.job_classes?.rp_prefix ? `${u.job_classes.rp_prefix}${RANK_MAP[u.job_rank] || ''}` : '冒険者'
                         return (
                           <div key={i} onClick={() => navigate(`/users/${u.id}`)}
                             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', background: '#1a1a2e', border: '1px solid #2a2a3e', cursor: 'pointer', transition: 'all .2s' }}
                             onMouseOver={e => e.currentTarget.style.borderColor = '#ff4444'}
-                            onMouseOut={e => e.currentTarget.style.borderColor = '#2a2a3e'}
-                          >
+                            onMouseOut={e => e.currentTarget.style.borderColor = '#2a2a3e'}>
                             <Avatar seed={u.username || 'user'} avatarUrl={u.avatar_url} size={36} />
                             <div style={{ flex: 1 }}>
                               <div style={{ fontWeight: 600, fontSize: '14px' }}>{u.username}</div>
@@ -400,9 +370,7 @@ export default function ProfilePage() {
                 <div style={s.divider} />
                 <div style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: '10px', padding: '12px 16px', fontSize: '12px', color: '#555', textAlign: 'center' }}>
                   ❤️ いいねした人を見るには
-                  <span onClick={() => navigate('/plan')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', marginLeft: '4px' }}>
-                    スタンダード以上のプラン
-                  </span>が必要です
+                  <span onClick={() => navigate('/plan')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', marginLeft: '4px' }}>スタンダード以上のプラン</span>が必要です
                 </div>
               </>
             )}
@@ -421,8 +389,7 @@ export default function ProfilePage() {
                         <span style={{ fontSize: '10px', color: '#666' }}>Rarity {b.rarity}</span>
                         {hoveredBadge === i && (
                           <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', background: '#0f0f1a', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`, borderRadius: '8px', padding: '6px 12px', fontSize: '11px', color: 'white', whiteSpace: 'nowrap', zIndex: 10, pointerEvents: 'none' }}>
-                            {b.label}の証明<br />
-                            <span style={{ color: '#888' }}>{BADGE_DESC[b.icon] || 'スキル証明バッジ'}</span>
+                            {b.label}の証明<br /><span style={{ color: '#888' }}>{BADGE_DESC[b.icon] || 'スキル証明バッジ'}</span>
                           </div>
                         )}
                       </div>

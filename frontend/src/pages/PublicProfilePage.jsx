@@ -4,12 +4,8 @@ import { useUser } from '@clerk/clerk-react'
 
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
-const RARITY_COLOR = {
-  S: '#ff4444', A: '#ff9900', B: '#667eea', C: '#4CAF50',
-}
-const RANK_LABEL = {
-  hito: 'の人', shi: '士', shou: '将', ou: '王', kou: '皇'
-}
+const RARITY_COLOR = { S: '#ff4444', A: '#ff9900', B: '#667eea', C: '#4CAF50' }
+const RANK_LABEL = { hito: 'の人', shi: '士', shou: '将', ou: '王', kou: '皇' }
 const BADGE_DESC = {
   '🗡️': '基礎知識を証明するバッジ',
   '⚔️': '専門知識を証明するバッジ',
@@ -18,10 +14,18 @@ const BADGE_DESC = {
 
 function Avatar({ seed, avatarUrl, size = 80 }) {
   if (avatarUrl) {
-    return <img src={avatarUrl} width={size} height={size} style={{ borderRadius: '50%', border: '3px solid #667eea', objectFit: 'cover' }} />
+    return <img src={avatarUrl} width={size} height={size} style={{ borderRadius: '50%', border: '3px solid #667eea', objectFit: 'cover', flexShrink: 0 }} />
   }
-  const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
-  return <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '3px solid #667eea' }} />
+  const icons = ['🌻', '🌸', '🌺', '🌹', '🌼', '🌷', '🍀', '🌈', '⭐', '🎀']
+  const bgColors = ['#1a1a2e', '#1a160a', '#0f1a1a', '#1a0f1a', '#0f0f1a', '#1a1a0f']
+  const idx = Math.abs((seed || 'user').split('').reduce((a, c) => a + c.charCodeAt(0), 0))
+  const icon = icons[idx % icons.length]
+  const bg = bgColors[idx % bgColors.length]
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', border: '3px solid #667eea', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5, flexShrink: 0 }}>
+      {icon}
+    </div>
+  )
 }
 
 export default function PublicProfilePage() {
@@ -72,16 +76,9 @@ export default function PublicProfilePage() {
         body: JSON.stringify({ from_user_id: myProfile.id, to_user_id: user_id, like_type: type }),
       })
       const result = await res.json()
-      if (!result.success && result.limit_reached) {
-        setLimitError(result.error)
-        return
-      }
-      if (result.remaining !== undefined && result.remaining !== null) {
-        setRemaining(result.remaining)
-      }
-      if (result.matched) {
-        setMatchNotice(true)
-      }
+      if (!result.success && result.limit_reached) { setLimitError(result.error); return }
+      if (result.remaining !== undefined && result.remaining !== null) setRemaining(result.remaining)
+      if (result.matched) setMatchNotice(true)
       const r2 = await fetch(`${API}/api/profile-likes?to_user_id=${user_id}&from_user_id=${myProfile.id}`)
       const data = await r2.json()
       if (data.success) setLikes(data)
@@ -90,15 +87,10 @@ export default function PublicProfilePage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-      読み込み中...
-    </div>
+    <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>読み込み中...</div>
   )
-
   if (!targetProfile) return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-      ユーザーが見つかりません
-    </div>
+    <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>ユーザーが見つかりません</div>
   )
 
   const jobClass = targetProfile.job_classes
@@ -110,7 +102,6 @@ export default function PublicProfilePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' }}>
       <div style={{ maxWidth: '520px', margin: '0 auto' }}>
-
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem', marginBottom: '1.5rem' }}>←</button>
 
         {matchNotice && (
@@ -118,9 +109,7 @@ export default function PublicProfilePage() {
             <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>💞</div>
             <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>マッチしました！</div>
             <div style={{ fontSize: '12px', color: '#888', marginBottom: '10px' }}>プロフィールのマッチタブからDMできます</div>
-            <button onClick={() => navigate('/profile')} style={{ background: '#667eea', border: 'none', borderRadius: '8px', color: 'white', padding: '6px 16px', cursor: 'pointer', fontSize: '12px' }}>
-              マッチタブを見る →
-            </button>
+            <button onClick={() => navigate('/profile')} style={{ background: '#667eea', border: 'none', borderRadius: '8px', color: 'white', padding: '6px 16px', cursor: 'pointer', fontSize: '12px' }}>マッチタブを見る →</button>
           </div>
         )}
 
@@ -129,60 +118,37 @@ export default function PublicProfilePage() {
             <Avatar seed={targetProfile.username || 'user'} avatarUrl={targetProfile.avatar_url} size={80} />
             <div>
               <div style={{ fontSize: '1.4rem', fontWeight: 700 }}>{targetProfile.username}</div>
-              <div style={{ fontSize: '14px', color: '#B4965A', marginTop: '4px' }}>
-                {jobClass?.icon} {title}
-              </div>
+              <div style={{ fontSize: '14px', color: '#B4965A', marginTop: '4px' }}>{jobClass?.icon} {title}</div>
               {targetProfile.equipped_title && (
                 <div style={{ marginTop: '6px' }}>
-                  <span style={{ fontSize: '12px', background: '#ff990022', border: '1px solid #ff9900', borderRadius: '99px', padding: '2px 10px', color: '#ff9900' }}>
-                    🏆 {targetProfile.equipped_title}
-                  </span>
+                  <span style={{ fontSize: '12px', background: '#ff990022', border: '1px solid #ff9900', borderRadius: '99px', padding: '2px 10px', color: '#ff9900' }}>🏆 {targetProfile.equipped_title}</span>
                 </div>
               )}
             </div>
           </div>
 
           {targetProfile.bio && (
-            <div style={{ background: '#1a1a2e', borderRadius: '10px', padding: '12px', fontSize: '14px', color: '#ccc', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-              {targetProfile.bio}
-            </div>
+            <div style={{ background: '#1a1a2e', borderRadius: '10px', padding: '12px', fontSize: '14px', color: '#ccc', lineHeight: 1.6, marginBottom: '1.5rem' }}>{targetProfile.bio}</div>
           )}
 
           {!isMe && user && (
             <>
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                <button onClick={() => handleLike('love')} disabled={liking} style={{ flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem', background: likes.my_like === 'love' ? '#ff444422' : '#1a1a2e', border: `1px solid ${likes.my_like === 'love' ? '#ff4444' : '#2a2a3e'}`, color: 'white', transition: 'all .2s', opacity: liking ? 0.6 : 1 }}>
-                  ❤️ {likes.love_count}
-                </button>
-                <button onClick={() => handleLike('broken')} disabled={liking} style={{ flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem', background: likes.my_like === 'broken' ? '#66666622' : '#1a1a2e', border: `1px solid ${likes.my_like === 'broken' ? '#888' : '#2a2a3e'}`, color: 'white', transition: 'all .2s', opacity: liking ? 0.6 : 1 }}>
-                  💔 {likes.broken_count}
-                </button>
+                <button onClick={() => handleLike('love')} disabled={liking} style={{ flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem', background: likes.my_like === 'love' ? '#ff444422' : '#1a1a2e', border: `1px solid ${likes.my_like === 'love' ? '#ff4444' : '#2a2a3e'}`, color: 'white', transition: 'all .2s', opacity: liking ? 0.6 : 1 }}>❤️ {likes.love_count}</button>
+                <button onClick={() => handleLike('broken')} disabled={liking} style={{ flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem', background: likes.my_like === 'broken' ? '#66666622' : '#1a1a2e', border: `1px solid ${likes.my_like === 'broken' ? '#888' : '#2a2a3e'}`, color: 'white', transition: 'all .2s', opacity: liking ? 0.6 : 1 }}>💔 {likes.broken_count}</button>
               </div>
-
               {limitError && (
                 <div style={{ marginTop: '10px', padding: '10px 14px', borderRadius: '10px', background: '#ff444415', border: '1px solid #ff444466', fontSize: '12px', color: '#ff8888', textAlign: 'center', lineHeight: 1.5 }}>
                   ⚠️ {limitError}
-                  <div style={{ marginTop: '6px' }}>
-                    <span onClick={() => navigate('/plan')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', fontSize: '11px' }}>
-                      プランをアップグレード →
-                    </span>
-                  </div>
+                  <div style={{ marginTop: '6px' }}><span onClick={() => navigate('/plan')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', fontSize: '11px' }}>プランをアップグレード →</span></div>
                 </div>
               )}
-
               {remaining !== null && !limitError && (
-                <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '12px', color: '#555' }}>
-                  本日の残りいいね: {remaining}回
-                </div>
+                <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '12px', color: '#555' }}>本日の残りいいね: {remaining}回</div>
               )}
             </>
           )}
-
-          {isMe && (
-            <div style={{ textAlign: 'center', color: '#666', fontSize: '13px' }}>
-              ❤️ {likes.love_count} / 💔 {likes.broken_count}
-            </div>
-          )}
+          {isMe && <div style={{ textAlign: 'center', color: '#666', fontSize: '13px' }}>❤️ {likes.love_count} / 💔 {likes.broken_count}</div>}
         </div>
 
         {badges.length > 0 && (
@@ -190,16 +156,13 @@ export default function PublicProfilePage() {
             <div style={{ fontSize: '12px', color: '#888', letterSpacing: '2px', marginBottom: '12px' }}>🎖️ スキル証明バッジ</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {badges.map((b, i) => (
-                <div key={i}
-                  onMouseEnter={() => setHoveredBadge(i)}
-                  onMouseLeave={() => setHoveredBadge(null)}
+                <div key={i} onMouseEnter={() => setHoveredBadge(i)} onMouseLeave={() => setHoveredBadge(null)}
                   style={{ position: 'relative', background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`, borderRadius: '10px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'default' }}>
                   <span style={{ fontSize: '20px' }}>{b.icon}</span>
                   <span style={{ fontSize: '10px', color: '#666' }}>Rarity {b.rarity}</span>
                   {hoveredBadge === i && (
                     <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', background: '#0f0f1a', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`, borderRadius: '8px', padding: '6px 12px', fontSize: '11px', color: 'white', whiteSpace: 'nowrap', zIndex: 10, pointerEvents: 'none' }}>
-                      {b.label}の証明<br />
-                      <span style={{ color: '#888' }}>{BADGE_DESC[b.icon] || 'スキル証明バッジ'}</span>
+                      {b.label}の証明<br /><span style={{ color: '#888' }}>{BADGE_DESC[b.icon] || 'スキル証明バッジ'}</span>
                     </div>
                   )}
                 </div>
@@ -222,7 +185,6 @@ export default function PublicProfilePage() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   )
