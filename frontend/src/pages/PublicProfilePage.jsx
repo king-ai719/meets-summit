@@ -39,6 +39,7 @@ export default function PublicProfilePage() {
   const [liking, setLiking] = useState(false)
   const [limitError, setLimitError] = useState(null)
   const [remaining, setRemaining] = useState(null)
+  const [matchNotice, setMatchNotice] = useState(false)
 
   useEffect(() => {
     fetch(`${API}/api/users/${user_id}/profile`)
@@ -65,6 +66,7 @@ export default function PublicProfilePage() {
     if (myProfile.id === user_id) return
     setLiking(true)
     setLimitError(null)
+    setMatchNotice(false)
     try {
       const res = await fetch(`${API}/api/profile-likes`, {
         method: 'POST',
@@ -80,6 +82,11 @@ export default function PublicProfilePage() {
 
       if (result.remaining !== undefined && result.remaining !== null) {
         setRemaining(result.remaining)
+      }
+
+      // マッチ通知
+      if (result.matched) {
+        setMatchNotice(true)
       }
 
       const r2 = await fetch(`${API}/api/profile-likes?to_user_id=${user_id}&from_user_id=${myProfile.id}`)
@@ -113,6 +120,26 @@ export default function PublicProfilePage() {
 
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem', marginBottom: '1.5rem' }}>←</button>
 
+        {/* マッチ通知バナー */}
+        {matchNotice && (
+          <div style={{
+            background: '#667eea22', border: '1px solid #667eea',
+            borderRadius: '12px', padding: '14px 18px', marginBottom: '1rem',
+            textAlign: 'center', fontSize: '14px',
+          }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '6px' }}>💞</div>
+            <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>マッチしました！</div>
+            <div style={{ fontSize: '12px', color: '#888', marginBottom: '10px' }}>プロフィールのマッチタブからDMできます</div>
+            <button
+              onClick={() => navigate('/profile')}
+              style={{ background: '#667eea', border: 'none', borderRadius: '8px', color: 'white', padding: '6px 16px', cursor: 'pointer', fontSize: '12px' }}
+            >
+              マッチタブを見る →
+            </button>
+          </div>
+        )}
+
+        {/* プロフィールカード */}
         <div style={{ background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '16px', padding: '2rem', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
             <Avatar seed={targetProfile.username || 'user'} size={80} />
@@ -147,8 +174,7 @@ export default function PublicProfilePage() {
                     flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem',
                     background: likes.my_like === 'love' ? '#ff444422' : '#1a1a2e',
                     border: `1px solid ${likes.my_like === 'love' ? '#ff4444' : '#2a2a3e'}`,
-                    color: 'white', transition: 'all .2s',
-                    opacity: liking ? 0.6 : 1,
+                    color: 'white', transition: 'all .2s', opacity: liking ? 0.6 : 1,
                   }}>
                   ❤️ {likes.love_count}
                 </button>
@@ -159,8 +185,7 @@ export default function PublicProfilePage() {
                     flex: 1, padding: '12px', borderRadius: '10px', cursor: liking ? 'not-allowed' : 'pointer', fontSize: '1.2rem',
                     background: likes.my_like === 'broken' ? '#66666622' : '#1a1a2e',
                     border: `1px solid ${likes.my_like === 'broken' ? '#888' : '#2a2a3e'}`,
-                    color: 'white', transition: 'all .2s',
-                    opacity: liking ? 0.6 : 1,
+                    color: 'white', transition: 'all .2s', opacity: liking ? 0.6 : 1,
                   }}>
                   💔 {likes.broken_count}
                 </button>
@@ -174,10 +199,7 @@ export default function PublicProfilePage() {
                 }}>
                   ⚠️ {limitError}
                   <div style={{ marginTop: '6px' }}>
-                    <span
-                      onClick={() => navigate('/plan')}
-                      style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', fontSize: '11px' }}
-                    >
+                    <span onClick={() => navigate('/plan')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', fontSize: '11px' }}>
                       プランをアップグレード →
                     </span>
                   </div>
