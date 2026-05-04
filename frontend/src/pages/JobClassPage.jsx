@@ -5,10 +5,14 @@ import { useNavigate } from 'react-router-dom'
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
 function Avatar({ seed, size = 60, badge = null }) {
-  const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
+  const icons = ['🌻', '🌸', '🌺', '🌹', '🌼', '🌷', '🍀', '🌈', '⭐', '🎀']
+  const bgColors = ['#1a1a2e', '#1a160a', '#0f1a1a', '#1a0f1a', '#0f0f1a', '#1a1a0f']
+  const idx = Math.abs((seed || 'user').split('').reduce((a, c) => a + c.charCodeAt(0), 0))
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
-      <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea', display: 'block' }} />
+      <div style={{ width: size, height: size, borderRadius: '50%', border: '2px solid #667eea', background: bgColors[idx % bgColors.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5 }}>
+        {icons[idx % icons.length]}
+      </div>
       {badge && (
         <div style={{ position: 'absolute', top: -8, right: -8, fontSize: '1.2rem', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.8))' }}>
           {badge}
