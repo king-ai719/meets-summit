@@ -5,21 +5,17 @@ import { useUser } from '@clerk/clerk-react'
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
 const RANK_LABEL = {
-  hito: 'の人',
-  shi:  '士',
-  shou: '将',
-  ou:   '王',
-  kou:  '皇',
+  hito: 'の人', shi: '士', shou: '将', ou: '王', kou: '皇',
 }
 
 const RARITY_COLOR = {
-  S: '#ff4444',
-  A: '#ff9900',
-  B: '#667eea',
-  C: '#4CAF50',
+  S: '#ff4444', A: '#ff9900', B: '#667eea', C: '#4CAF50',
 }
 
-function Avatar({ seed, size = 40 }) {
+function Avatar({ seed, avatarUrl, size = 40 }) {
+  if (avatarUrl) {
+    return <img src={avatarUrl} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea', objectFit: 'cover' }} />
+  }
   const url = `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`
   return <img src={url} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea' }} />
 }
@@ -27,7 +23,7 @@ function Avatar({ seed, size = 40 }) {
 function buildTitle(userObj) {
   if (!userObj) return '冒険者'
   const prefix = userObj.job_classes?.rp_prefix || ''
-  const rank   = RANK_LABEL[userObj.job_rank] || ''
+  const rank = RANK_LABEL[userObj.job_rank] || ''
   if (!prefix && !rank) return '冒険者'
   return `${prefix}${rank}`
 }
@@ -54,7 +50,6 @@ export default function GuildDetailPage() {
   const [leaving, setLeaving] = useState(false)
   const [dissolving, setDissolving] = useState(false)
   const [loading, setLoading] = useState(true)
-
   const [messages, setMessages] = useState([])
   const [chatInput, setChatInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -135,17 +130,13 @@ export default function GuildDetailPage() {
     }
   }, [messages, activeTab])
 
-  // リアクション取得
   const fetchReaction = async (message_id) => {
     if (reactions[message_id]) return
     const res = await fetch(`${API}/api/message-reactions?message_id=${message_id}&user_id=${profile?.id || ''}`)
     const data = await res.json()
-    if (data.success) {
-      setReactions(prev => ({ ...prev, [message_id]: data }))
-    }
+    if (data.success) setReactions(prev => ({ ...prev, [message_id]: data }))
   }
 
-  // リアクション送信
   const handleReaction = async (message_id, reaction_type) => {
     if (!profile) return
     await fetch(`${API}/api/message-reactions`, {
@@ -153,12 +144,9 @@ export default function GuildDetailPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message_id, user_id: profile.id, reaction_type }),
     })
-    // リアクション再取得
     const res = await fetch(`${API}/api/message-reactions?message_id=${message_id}&user_id=${profile.id}`)
     const data = await res.json()
-    if (data.success) {
-      setReactions(prev => ({ ...prev, [message_id]: data }))
-    }
+    if (data.success) setReactions(prev => ({ ...prev, [message_id]: data }))
   }
 
   const handleSendMessage = async () => {
@@ -337,14 +325,8 @@ export default function GuildDetailPage() {
                   const unlockInfo = questUnlocks[quest.id]
                   const isLocked = quest.unlock_condition && (!unlockInfo || !unlockInfo.unlocked)
                   const lockReasons = unlockInfo?.conditions?.filter(c => !c.met).map(c => c.message) || []
-
                   return (
-                    <div key={quest.id} style={{
-                      background: isLocked ? '#141420' : '#1a1a2e',
-                      border: `1px solid ${isLocked ? '#333' : diff.color + '22'}`,
-                      borderRadius: '10px', padding: '1rem',
-                      opacity: isLocked ? 0.7 : 1,
-                    }}>
+                    <div key={quest.id} style={{ background: isLocked ? '#141420' : '#1a1a2e', border: `1px solid ${isLocked ? '#333' : diff.color + '22'}`, borderRadius: '10px', padding: '1rem', opacity: isLocked ? 0.7 : 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
@@ -352,13 +334,9 @@ export default function GuildDetailPage() {
                             <span style={{ fontWeight: 600, fontSize: '15px', color: isLocked ? '#666' : 'white' }}>{quest.title}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: '#0f0f1a', color: isLocked ? '#555' : diff.color, border: `1px solid ${isLocked ? '#333' : diff.color}` }}>
-                              {diff.label}
-                            </span>
+                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: '#0f0f1a', color: isLocked ? '#555' : diff.color, border: `1px solid ${isLocked ? '#333' : diff.color}` }}>{diff.label}</span>
                             <span style={{ fontSize: '11px', color: '#888' }}>⏱ {quest.time_limit}s</span>
-                            {quest.reward_value && (
-                              <span style={{ fontSize: '11px', color: isLocked ? '#555' : '#B4965A' }}>🏆 {quest.reward_value}</span>
-                            )}
+                            {quest.reward_value && <span style={{ fontSize: '11px', color: isLocked ? '#555' : '#B4965A' }}>🏆 {quest.reward_value}</span>}
                           </div>
                           {isLocked && lockReasons.length > 0 && (
                             <div style={{ marginTop: '8px', padding: '6px 10px', background: '#0f0f1a', borderRadius: '6px', border: '1px solid #2a2a3e' }}>
@@ -424,7 +402,6 @@ export default function GuildDetailPage() {
                       const title = buildTitle(u)
                       const isMsgGM = members.some(m => m.user_id === msg.user_id && m.role === 'master')
                       const msgReaction = reactions[msg.id]
-
                       return (
                         <div key={i}
                           onMouseEnter={() => { setHoveredMsg(msg.id); fetchReaction(msg.id) }}
@@ -432,70 +409,35 @@ export default function GuildDetailPage() {
                           style={{ display: 'flex', gap: '10px', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end', position: 'relative' }}>
                           {!isMe && (
                             <div onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ cursor: u.id ? 'pointer' : 'default' }}>
-                              <Avatar seed={name} size={32} />
+                              <Avatar seed={name} avatarUrl={u.avatar_url} size={32} />
                             </div>
                           )}
                           <div style={{ maxWidth: '70%' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', flexDirection: isMe ? 'row-reverse' : 'row' }}>
-                              {isMsgGM && (
-                                <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 6px', color: '#B4965A' }}>🏰</span>
-                              )}
-                              <span onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ fontSize: '11px', color: '#888', cursor: u.id ? 'pointer' : 'default' }}>
-                                {name}
-                              </span>
+                              {isMsgGM && <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 6px', color: '#B4965A' }}>🏰</span>}
+                              <span onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ fontSize: '11px', color: '#888', cursor: u.id ? 'pointer' : 'default' }}>{name}</span>
                               {!isMe && <span style={{ fontSize: '11px', color: '#B4965A' }}>{title}</span>}
                             </div>
-                            <div style={{
-                              background: isMe ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#1a1a2e',
-                              border: isMe ? 'none' : '1px solid #2a2a3e',
-                              borderRadius: isMe ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
-                              padding: '10px 14px', fontSize: '14px', lineHeight: '1.5', wordBreak: 'break-word',
-                            }}>
+                            <div style={{ background: isMe ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#1a1a2e', border: isMe ? 'none' : '1px solid #2a2a3e', borderRadius: isMe ? '12px 12px 4px 12px' : '12px 12px 12px 4px', padding: '10px 14px', fontSize: '14px', lineHeight: '1.5', wordBreak: 'break-word' }}>
                               {msg.content}
                             </div>
-
-                            {/* リアクション表示 */}
                             <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'center' }}>
                               <div style={{ fontSize: '10px', color: '#555' }}>{formatTime(msg.created_at)}</div>
                               {msgReaction && (msgReaction.love_count > 0 || msgReaction.broken_count > 0) && (
                                 <div style={{ display: 'flex', gap: '4px' }}>
                                   {msgReaction.love_count > 0 && (
-                                    <span style={{ fontSize: '11px', background: '#ff444422', border: '1px solid #ff444466', borderRadius: '99px', padding: '1px 6px', cursor: 'pointer' }}
-                                      onClick={() => handleReaction(msg.id, 'love')}>
-                                      ❤️ {msgReaction.love_count}
-                                    </span>
+                                    <span style={{ fontSize: '11px', background: '#ff444422', border: '1px solid #ff444466', borderRadius: '99px', padding: '1px 6px', cursor: 'pointer' }} onClick={() => handleReaction(msg.id, 'love')}>❤️ {msgReaction.love_count}</span>
                                   )}
                                   {msgReaction.broken_count > 0 && (
-                                    <span style={{ fontSize: '11px', background: '#66666622', border: '1px solid #66666666', borderRadius: '99px', padding: '1px 6px', cursor: 'pointer' }}
-                                      onClick={() => handleReaction(msg.id, 'broken')}>
-                                      💔 {msgReaction.broken_count}
-                                    </span>
+                                    <span style={{ fontSize: '11px', background: '#66666622', border: '1px solid #66666666', borderRadius: '99px', padding: '1px 6px', cursor: 'pointer' }} onClick={() => handleReaction(msg.id, 'broken')}>💔 {msgReaction.broken_count}</span>
                                   )}
                                 </div>
                               )}
                             </div>
-
-                            {/* ホバー時リアクションボタン */}
                             {hoveredMsg === msg.id && profile && msg.user_id !== profile.id && (
-                              <div style={{
-                                position: 'absolute',
-                                [isMe ? 'left' : 'right']: '0',
-                                bottom: '30px',
-                                display: 'flex', gap: '4px',
-                                background: '#1a1a2e', border: '1px solid #2a2a3e',
-                                borderRadius: '20px', padding: '4px 8px',
-                                zIndex: 10,
-                              }}>
-                                <button onClick={() => handleReaction(msg.id, 'love')}
-                                  style={{
-                                    background: msgReaction?.my_reaction === 'love' ? '#ff444433' : 'transparent',
-                                    border: 'none', cursor: 'pointer', fontSize: '16px', padding: '2px 4px', borderRadius: '99px',
-                                  }}>❤️</button>
-                                <button onClick={() => handleReaction(msg.id, 'broken')}
-                                  style={{
-                                    background: msgReaction?.my_reaction === 'broken' ? '#66666633' : 'transparent',
-                                    border: 'none', cursor: 'pointer', fontSize: '16px', padding: '2px 4px', borderRadius: '99px',
-                                  }}>💔</button>
+                              <div style={{ position: 'absolute', [isMe ? 'left' : 'right']: '0', bottom: '30px', display: 'flex', gap: '4px', background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: '20px', padding: '4px 8px', zIndex: 10 }}>
+                                <button onClick={() => handleReaction(msg.id, 'love')} style={{ background: msgReaction?.my_reaction === 'love' ? '#ff444433' : 'transparent', border: 'none', cursor: 'pointer', fontSize: '16px', padding: '2px 4px', borderRadius: '99px' }}>❤️</button>
+                                <button onClick={() => handleReaction(msg.id, 'broken')} style={{ background: msgReaction?.my_reaction === 'broken' ? '#66666633' : 'transparent', border: 'none', cursor: 'pointer', fontSize: '16px', padding: '2px 4px', borderRadius: '99px' }}>💔</button>
                               </div>
                             )}
                           </div>
@@ -505,18 +447,12 @@ export default function GuildDetailPage() {
                   )}
                   <div ref={messagesEndRef} />
                 </div>
-
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    value={chatInput}
-                    onChange={e => setChatInput(e.target.value)}
+                  <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage() } }}
                     placeholder="メッセージを入力..."
-                    style={{ flex: 1, background: '#1a1a2e', border: '1px solid #333', borderRadius: '8px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none' }}
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={sending || !chatInput.trim()}
+                    style={{ flex: 1, background: '#1a1a2e', border: '1px solid #333', borderRadius: '8px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none' }} />
+                  <button onClick={handleSendMessage} disabled={sending || !chatInput.trim()}
                     style={{ padding: '10px 18px', background: chatInput.trim() ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#2a2a3e', border: 'none', borderRadius: '8px', color: 'white', cursor: chatInput.trim() ? 'pointer' : 'default', fontSize: '14px', transition: 'all .2s' }}>
                     {sending ? '...' : '送信'}
                   </button>
@@ -532,62 +468,44 @@ export default function GuildDetailPage() {
               <p style={{ color: '#666', textAlign: 'center' }}>まだメンバーがいません</p>
             ) : (
               members.map((member, i) => {
-                const u       = member.users || {}
-                const name    = u.username || '冒険者'
-                const title   = buildTitle(u)
+                const u = member.users || {}
+                const name = u.username || '冒険者'
+                const title = buildTitle(u)
                 const jobIcon = u.job_classes?.icon || '⚔️'
-                const isGM    = member.role === 'master'
-                const badges  = Array.isArray(u.badges) ? u.badges : []
-                const titles  = Array.isArray(u.titles) ? u.titles : []
-
+                const isGM = member.role === 'master'
+                const badges = Array.isArray(u.badges) ? u.badges : []
+                const titles = Array.isArray(u.titles) ? u.titles : []
                 return (
-                  <div key={i} style={{
-                    padding: '12px', background: '#1a1a2e', borderRadius: '10px',
-                    border: isGM ? '1px solid #B4965A55' : '1px solid transparent',
-                  }}>
+                  <div key={i} style={{ padding: '12px', background: '#1a1a2e', borderRadius: '10px', border: isGM ? '1px solid #B4965A55' : '1px solid transparent' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ cursor: u.id ? 'pointer' : 'default' }}>
-                        <Avatar seed={name} size={44} />
+                        <Avatar seed={name} avatarUrl={u.avatar_url} size={44} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div onClick={() => u.id && navigate(`/users/${u.id}`)}
-                          style={{ fontWeight: 600, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: u.id ? 'pointer' : 'default' }}>
+                        <div onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ fontWeight: 600, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: u.id ? 'pointer' : 'default' }}>
                           {name}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
                           <span style={{ fontSize: '14px' }}>{jobIcon}</span>
                           <span style={{ fontSize: '12px', color: '#B4965A' }}>{title}</span>
-                          {isGM && (
-                            <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 7px', color: '#B4965A', marginLeft: '4px' }}>GM</span>
-                          )}
+                          {isGM && <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 7px', color: '#B4965A', marginLeft: '4px' }}>GM</span>}
                         </div>
                       </div>
                     </div>
-
                     {badges.length > 0 && (
                       <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {badges.map((b, bi) => (
-                          <div key={bi} style={{
-                            display: 'flex', alignItems: 'center', gap: '4px',
-                            background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22',
-                            border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`,
-                            borderRadius: '99px', padding: '2px 8px',
-                          }}>
+                          <div key={bi} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`, borderRadius: '99px', padding: '2px 8px' }}>
                             <span style={{ fontSize: '12px' }}>{b.icon}</span>
                             <span style={{ fontSize: '11px', color: RARITY_COLOR[b.rarity] || '#4CAF50' }}>{b.label}</span>
                           </div>
                         ))}
                       </div>
                     )}
-
                     {titles.length > 0 && (
                       <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {titles.map((t, ti) => (
-                          <div key={ti} style={{
-                            background: (RARITY_COLOR[t.rarity] || '#4CAF50') + '11',
-                            border: `1px solid ${RARITY_COLOR[t.rarity] || '#4CAF50'}55`,
-                            borderRadius: '99px', padding: '2px 8px',
-                          }}>
+                          <div key={ti} style={{ background: (RARITY_COLOR[t.rarity] || '#4CAF50') + '11', border: `1px solid ${RARITY_COLOR[t.rarity] || '#4CAF50'}55`, borderRadius: '99px', padding: '2px 8px' }}>
                             <span style={{ fontSize: '11px', color: RARITY_COLOR[t.rarity] || '#4CAF50' }}>🏆 {t.value}</span>
                           </div>
                         ))}
