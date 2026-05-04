@@ -26,6 +26,7 @@ const BADGE_DESC = {
   '💀': 'マスターレベルを証明するバッジ',
 }
 const PLAN_CAN_UPLOAD = ['light', 'standard', 'premium']
+const PLAN_CAN_SEE_LIKERS = ['standard', 'premium']
 
 function Avatar({ seed, avatarUrl, size = 48 }) {
   if (avatarUrl) {
@@ -43,6 +44,7 @@ export default function ProfilePage() {
   const [jobClasses, setJobClasses] = useState([])
   const [profile, setProfile] = useState(null)
   const [matches, setMatches] = useState([])
+  const [likers, setLikers] = useState([])
   const [form, setForm] = useState({
     username: '', bio: '', job_class_id: null, job_rank: null, gender: '', equipped_title: null,
   })
@@ -89,6 +91,16 @@ export default function ProfilePage() {
               else setMatches([])
             })
             .catch(() => setMatches([]))
+
+          // いいね受信一覧（standard以上）
+          if (PLAN_CAN_SEE_LIKERS.includes(u.plan)) {
+            fetch(`${API}/api/profile-likes/received?user_id=${u.id}&plan=${u.plan}`)
+              .then(r => r.json())
+              .then(d => {
+                if (d.success && Array.isArray(d.data)) setLikers(d.data)
+              })
+              .catch(() => {})
+          }
         }
         setLoading(false)
       })
@@ -155,6 +167,7 @@ export default function ProfilePage() {
   const titles = profile?.titles || []
   const badges = profile?.badges || []
   const canUpload = PLAN_CAN_UPLOAD.includes(profile?.plan)
+  const canSeeLikers = PLAN_CAN_SEE_LIKERS.includes(profile?.plan)
 
   const s = {
     page: { minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' },
@@ -254,11 +267,7 @@ export default function ProfilePage() {
                 onClick={() => canUpload && fileInputRef.current?.click()}>
                 <Avatar seed={form.username || 'user'} avatarUrl={avatarUrl} size={80} />
                 {canUpload && (
-                  <div style={{
-                    position: 'absolute', bottom: 0, right: 0,
-                    background: '#667eea', borderRadius: '50%', width: '24px', height: '24px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px',
-                  }}>📷</div>
+                  <div style={{ position: 'absolute', bottom: 0, right: 0, background: '#667eea', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>📷</div>
                 )}
               </div>
               <div>
@@ -270,9 +279,7 @@ export default function ProfilePage() {
                 ) : (
                   <div style={{ fontSize: '12px', color: '#555' }}>
                     📷 写真アップロードは<br />
-                    <span onClick={() => navigate('/plan')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline' }}>
-                      ライト以上のプラン
-                    </span>で利用可能
+                    <span onClick={() => navigate('/plan')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline' }}>ライト以上のプラン</span>で利用可能
                   </div>
                 )}
               </div>
@@ -299,9 +306,7 @@ export default function ProfilePage() {
                 onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
                 disabled={!!usernameChangeDaysLeft} />
               {usernameChangeDaysLeft && (
-                <div style={{ fontSize: '11px', color: '#cc3333', marginTop: '6px' }}>
-                  🔒 名前変更はあと{usernameChangeDaysLeft}日後に可能です
-                </div>
+                <div style={{ fontSize: '11px', color: '#cc3333', marginTop: '6px' }}>🔒 名前変更はあと{usernameChangeDaysLeft}日後に可能です</div>
               )}
             </div>
 
@@ -352,6 +357,55 @@ export default function ProfilePage() {
                 ))}
               </div>
             </div>
+
+            {/* いいね受信一覧（standard以上） */}
+            {canSeeLikers && (
+              <>
+                <div style={s.divider} />
+                <div style={s.field}>
+                  <label style={s.label}>❤️ あなたへのいいね {likers.length > 0 ? `(${likers.length})` : ''}</label>
+                  {likers.length === 0 ? (
+                    <div style={{ color: '#555', fontSize: '13px' }}>まだいいねがありません</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {likers.map((like, i) => {
+                        const u = like.users
+                        if (!u) return null
+                        const rankLabel = u.job_classes?.rp_prefix
+                          ? `${u.job_classes.rp_prefix}${RANK_MAP[u.job_rank] || ''}`
+                          : '冒険者'
+                        return (
+                          <div key={i} onClick={() => navigate(`/users/${u.id}`)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', background: '#1a1a2e', border: '1px solid #2a2a3e', cursor: 'pointer', transition: 'all .2s' }}
+                            onMouseOver={e => e.currentTarget.style.borderColor = '#ff4444'}
+                            onMouseOut={e => e.currentTarget.style.borderColor = '#2a2a3e'}
+                          >
+                            <Avatar seed={u.username || 'user'} avatarUrl={u.avatar_url} size={36} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 600, fontSize: '14px' }}>{u.username}</div>
+                              <div style={{ fontSize: '11px', color: '#B4965A' }}>{u.job_classes?.icon} {rankLabel}</div>
+                            </div>
+                            <div style={{ fontSize: '14px' }}>❤️</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {!canSeeLikers && (
+              <>
+                <div style={s.divider} />
+                <div style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: '10px', padding: '12px 16px', fontSize: '12px', color: '#555', textAlign: 'center' }}>
+                  ❤️ いいねした人を見るには
+                  <span onClick={() => navigate('/plan')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', marginLeft: '4px' }}>
+                    スタンダード以上のプラン
+                  </span>が必要です
+                </div>
+              </>
+            )}
 
             {badges.length > 0 && (
               <>
