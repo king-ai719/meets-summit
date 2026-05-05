@@ -91,3 +91,8 @@ export default function TermsPage() {
         <p style={s.p}>本規約は日本法に準拠し、東京地方裁判所を第一審の専属的合意管轄裁判所とします。</p>
 
         <div style={s.divider} />
+
+      </div>
+    </div>
+  )
+}
