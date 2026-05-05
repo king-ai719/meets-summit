@@ -13,9 +13,9 @@ const PLAN_COLORS = {
 
 const PLAN_ICONS = {
   free: '⚔️',
-  light: '🗡️',
-  standard: '👑',
-  premium: '💎',
+  light: '⭐',
+  standard: '💎',
+  premium: '👑',
 }
 
 export default function PlanPage() {
@@ -76,7 +76,6 @@ export default function PlanPage() {
           </div>
         </div>
 
-        {/* 現在のプラン */}
         <div style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: '12px', padding: '16px', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{ fontSize: '1.5rem' }}>{PLAN_ICONS[currentPlan]}</span>
           <div>
@@ -87,18 +86,28 @@ export default function PlanPage() {
           </div>
         </div>
 
-        {/* プランカード */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
           {plans.map(plan => {
             const isCurrent = plan.id === currentPlan
             const color = PLAN_COLORS[plan.id]
+            const isPremium = plan.id === 'premium'
+            const isStandard = plan.id === 'standard'
             return (
               <div key={plan.id} style={{
                 background: isCurrent ? color + '11' : '#0f0f1a',
-                border: `1px solid ${isCurrent ? color : '#2a2a3e'}`,
+                border: `2px solid ${isCurrent ? color : isStandard ? color + '88' : '#2a2a3e'}`,
                 borderRadius: '16px', padding: '1.5rem',
                 display: 'flex', flexDirection: 'column', gap: '12px',
+                position: 'relative',
+                boxShadow: isPremium ? `0 0 20px ${color}44` : isStandard ? `0 0 10px ${color}22` : 'none',
               }}>
+                {/* おすすめバッジ（standard） */}
+                {isStandard && (
+                  <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: '#667eea', color: 'white', fontSize: '11px', fontWeight: 700, padding: '2px 12px', borderRadius: '99px', whiteSpace: 'nowrap' }}>
+                    おすすめ
+                  </div>
+                )}
+
                 <div style={{ fontSize: '2rem', textAlign: 'center' }}>{PLAN_ICONS[plan.id]}</div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '1.1rem', fontWeight: 700, color }}>{plan.name}</div>
@@ -113,6 +122,12 @@ export default function PlanPage() {
                     <span style={{ color: '#4CAF50' }}>✓</span>
                     <span style={{ color: '#ccc' }}>
                       いいね {plan.likes_per_day === -1 ? '無制限' : `${plan.likes_per_day}回/日`}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ color: '#4CAF50' }}>✓</span>
+                    <span style={{ color: '#ccc' }}>
+                      クエスト {plan.quest_per_day === -1 ? '無制限' : `${plan.quest_per_day}回/日`}
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -131,6 +146,12 @@ export default function PlanPage() {
                     <span style={{ color: '#4CAF50' }}>✓</span>
                     <span style={{ color: '#ccc' }}>DMルーム</span>
                   </div>
+                  {isPremium && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: '#ff9900' }}>✓</span>
+                      <span style={{ color: '#ff9900' }}>👑 プロフ装飾</span>
+                    </div>
+                  )}
                 </div>
 
                 {isCurrent ? (
