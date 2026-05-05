@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
+import { getPlanIcon, getPlanGlow, getPlanBorderColor } from '../utils/planBadge'
 
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
@@ -28,9 +29,18 @@ const BADGE_DESC = {
 const PLAN_CAN_UPLOAD = ['light', 'standard', 'premium']
 const PLAN_CAN_SEE_LIKERS = ['standard', 'premium']
 
-function Avatar({ seed, avatarUrl, size = 48 }) {
+function Avatar({ seed, avatarUrl, size = 48, plan }) {
+  const glow = getPlanGlow(plan)
+  const borderColor = getPlanBorderColor(plan)
+  const style = {
+    borderRadius: '50%',
+    border: `2px solid ${borderColor}`,
+    objectFit: 'cover',
+    flexShrink: 0,
+    boxShadow: glow || 'none',
+  }
   if (avatarUrl) {
-    return <img src={avatarUrl} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea', objectFit: 'cover', flexShrink: 0 }} />
+    return <img src={avatarUrl} width={size} height={size} style={style} />
   }
   const icons = ['🌻', '🌸', '🌺', '🌹', '🌼', '🌷', '🍀', '🌈', '⭐', '🎀']
   const bgColors = ['#1a1a2e', '#1a160a', '#0f1a1a', '#1a0f1a', '#0f0f1a', '#1a1a0f']
@@ -38,7 +48,7 @@ function Avatar({ seed, avatarUrl, size = 48 }) {
   const icon = icons[idx % icons.length]
   const bg = bgColors[idx % bgColors.length]
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', border: '2px solid #667eea', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5, flexShrink: 0 }}>
+    <div style={{ width: size, height: size, ...style, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5 }}>
       {icon}
     </div>
   )
@@ -61,7 +71,7 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [hoveredBadge, setHoveredBadge] = useState(null)
-  const [hoveredRank, setHoveredRank] = useState(null) // ★追加
+  const [hoveredRank, setHoveredRank] = useState(null)
   const [usernameChangeDaysLeft, setUsernameChangeDaysLeft] = useState(null)
   const [tab, setTab] = useState('profile')
   const [uploading, setUploading] = useState(false)
@@ -177,11 +187,13 @@ export default function ProfilePage() {
   const badges = profile?.badges || []
   const canUpload = PLAN_CAN_UPLOAD.includes(profile?.plan)
   const canSeeLikers = PLAN_CAN_SEE_LIKERS.includes(profile?.plan)
-  const genderLocked = !!profile?.gender // ★登録済みなら変更不可
+  const genderLocked = !!profile?.gender
+  const planIcon = getPlanIcon(profile?.plan)
+  const isPremium = profile?.plan === 'premium'
 
   const s = {
     page: { minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' },
-    card: { maxWidth: '640px', margin: '0 auto', background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '16px', padding: '2rem' },
+    card: { maxWidth: '640px', margin: '0 auto', background: '#0f0f1a', border: `1px solid ${getPlanBorderColor(profile?.plan)}`, borderRadius: '16px', padding: '2rem', boxShadow: getPlanGlow(profile?.plan) || 'none' },
     label: { display: 'block', fontSize: '0.75rem', letterSpacing: '2px', color: '#888', marginBottom: '8px', textTransform: 'uppercase' },
     input: { width: '100%', background: '#1a1a2e', border: '1px solid #333', borderRadius: '8px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none', boxSizing: 'border-box' },
     textarea: { width: '100%', background: '#1a1a2e', border: '1px solid #333', borderRadius: '8px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none', minHeight: '80px', resize: 'vertical', boxSizing: 'border-box' },
@@ -233,14 +245,18 @@ export default function ProfilePage() {
                   if (!partner) return null
                   const jobIcon = partner.job_classes?.icon || '⚔️'
                   const rankLabel = partner.job_classes?.rp_prefix ? `${partner.job_classes.rp_prefix}${RANK_MAP[partner.job_rank] || ''}` : '冒険者'
+                  const partnerPlanIcon = getPlanIcon(partner.plan)
                   return (
                     <div key={match.id} onClick={() => navigate(`/dm/${match.id}`)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', borderRadius: '12px', cursor: 'pointer', background: '#1a1a2e', border: '1px solid #2a2a3e', transition: 'all .2s' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', borderRadius: '12px', cursor: 'pointer', background: '#1a1a2e', border: `1px solid ${getPlanBorderColor(partner.plan)}`, transition: 'all .2s', boxShadow: getPlanGlow(partner.plan) || 'none' }}
                       onMouseOver={e => e.currentTarget.style.borderColor = '#667eea'}
-                      onMouseOut={e => e.currentTarget.style.borderColor = '#2a2a3e'}>
-                      <Avatar seed={partner.username || 'user'} avatarUrl={partner.avatar_url} size={48} />
+                      onMouseOut={e => e.currentTarget.style.borderColor = getPlanBorderColor(partner.plan)}>
+                      <Avatar seed={partner.username || 'user'} avatarUrl={partner.avatar_url} size={48} plan={partner.plan} />
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: '15px' }}>{partner.username}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '15px' }}>{partner.username}</div>
+                          {partnerPlanIcon && <span style={{ fontSize: '14px' }}>{partnerPlanIcon}</span>}
+                        </div>
                         <div style={{ fontSize: '12px', color: '#B4965A', marginTop: '2px' }}>{jobIcon} {rankLabel}</div>
                         {partner.equipped_title && <div style={{ fontSize: '11px', color: '#ff9900', marginTop: '2px' }}>🏆 {partner.equipped_title}</div>}
                       </div>
@@ -258,7 +274,10 @@ export default function ProfilePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
               <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem' }}>←</button>
               <div>
-                <h1 style={{ fontSize: '1.4rem', fontWeight: 600, letterSpacing: '2px' }}>Edit Profile</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h1 style={{ fontSize: '1.4rem', fontWeight: 600, letterSpacing: '2px' }}>Edit Profile</h1>
+                  {planIcon && <span style={{ fontSize: '1.4rem' }}>{planIcon}</span>}
+                </div>
                 <p style={{ color: '#666', fontSize: '12px', letterSpacing: '3px' }}>冒険者の証明</p>
               </div>
             </div>
@@ -266,7 +285,7 @@ export default function ProfilePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
               <div style={{ position: 'relative', cursor: canUpload ? 'pointer' : 'default' }}
                 onClick={() => canUpload && fileInputRef.current?.click()}>
-                <Avatar seed={form.username || 'user'} avatarUrl={avatarUrl} size={80} />
+                <Avatar seed={form.username || 'user'} avatarUrl={avatarUrl} size={80} plan={profile?.plan} />
                 {canUpload && (
                   <div style={{ position: 'absolute', bottom: 0, right: 0, background: '#667eea', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>📷</div>
                 )}
@@ -324,7 +343,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* ★ ランクにツールチップ追加 */}
             <div style={s.field}>
               <label style={s.label}>ランク / Rank</label>
               <div style={s.rankGrid}>
@@ -335,17 +353,10 @@ export default function ProfilePage() {
                     onMouseEnter={() => setHoveredRank(r.value)}
                     onMouseLeave={() => setHoveredRank(null)}
                     onTouchStart={() => setHoveredRank(r.value)}
-                    onTouchEnd={() => setTimeout(() => setHoveredRank(null), 1500)}
-                  >
+                    onTouchEnd={() => setTimeout(() => setHoveredRank(null), 1500)}>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: form.job_rank === r.value ? '#B4965A' : 'white' }}>{r.label}</div>
                     {hoveredRank === r.value && (
-                      <div style={{
-                        position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)',
-                        background: '#0f0f1a', border: '1px solid #B4965A', borderRadius: '8px',
-                        padding: '6px 10px', fontSize: '11px', color: '#B4965A',
-                        whiteSpace: 'nowrap', zIndex: 10, pointerEvents: 'none',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
-                      }}>
+                      <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', background: '#0f0f1a', border: '1px solid #B4965A', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', color: '#B4965A', whiteSpace: 'nowrap', zIndex: 10, pointerEvents: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
                         {r.desc}
                       </div>
                     )}
@@ -358,24 +369,18 @@ export default function ProfilePage() {
 
             <div style={s.field}>
               <label style={s.label}>生年月日 / Birthday</label>
-              <input
-                type="date"
+              <input type="date"
                 style={{ ...s.input, colorScheme: 'dark', opacity: profile?.birthday ? 0.5 : 1 }}
                 value={form.birthday}
                 max={new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                onChange={e => {
-                  if (profile?.birthday) return
-                  setForm(f => ({ ...f, birthday: e.target.value }))
-                }}
-                disabled={!!profile?.birthday}
-              />
+                onChange={e => { if (profile?.birthday) return; setForm(f => ({ ...f, birthday: e.target.value })) }}
+                disabled={!!profile?.birthday} />
               {profile?.birthday
                 ? <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>🔒 生年月日は変更できません</div>
                 : <div style={{ fontSize: '11px', color: '#888', marginTop: '6px' }}>※ 18歳未満は登録できません。登録後は変更不可です。</div>
               }
             </div>
 
-            {/* ★ 性別変更不可対応 */}
             <div style={s.field}>
               <label style={s.label}>性別 / Gender</label>
               <div style={s.genderRow}>
@@ -406,14 +411,18 @@ export default function ProfilePage() {
                         const u = like.users
                         if (!u) return null
                         const rankLabel = u.job_classes?.rp_prefix ? `${u.job_classes.rp_prefix}${RANK_MAP[u.job_rank] || ''}` : '冒険者'
+                        const likerPlanIcon = getPlanIcon(u.plan)
                         return (
                           <div key={i} onClick={() => navigate(`/users/${u.id}`)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', background: '#1a1a2e', border: '1px solid #2a2a3e', cursor: 'pointer', transition: 'all .2s' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', background: '#1a1a2e', border: `1px solid ${getPlanBorderColor(u.plan)}`, cursor: 'pointer', transition: 'all .2s', boxShadow: getPlanGlow(u.plan) || 'none' }}
                             onMouseOver={e => e.currentTarget.style.borderColor = '#ff4444'}
-                            onMouseOut={e => e.currentTarget.style.borderColor = '#2a2a3e'}>
-                            <Avatar seed={u.username || 'user'} avatarUrl={u.avatar_url} size={36} />
+                            onMouseOut={e => e.currentTarget.style.borderColor = getPlanBorderColor(u.plan)}>
+                            <Avatar seed={u.username || 'user'} avatarUrl={u.avatar_url} size={36} plan={u.plan} />
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 600, fontSize: '14px' }}>{u.username}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ fontWeight: 600, fontSize: '14px' }}>{u.username}</div>
+                                {likerPlanIcon && <span style={{ fontSize: '12px' }}>{likerPlanIcon}</span>}
+                              </div>
                               <div style={{ fontSize: '11px', color: '#B4965A' }}>{u.job_classes?.icon} {rankLabel}</div>
                             </div>
                             <div style={{ fontSize: '14px' }}>❤️</div>
@@ -445,7 +454,15 @@ export default function ProfilePage() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {badges.map((b, i) => (
                       <div key={i} onMouseEnter={() => setHoveredBadge(i)} onMouseLeave={() => setHoveredBadge(null)}
-                        style={{ position: 'relative', background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`, borderRadius: '10px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'default' }}>
+                        style={{
+                          position: 'relative',
+                          background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22',
+                          border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`,
+                          borderRadius: '10px', padding: '8px 14px',
+                          display: 'flex', alignItems: 'center', gap: '6px', cursor: 'default',
+                          animation: isPremium ? 'premiumGlow 2s ease-in-out infinite' : 'none',
+                          boxShadow: isPremium ? `0 0 6px ${RARITY_COLOR[b.rarity] || '#4CAF50'}88` : 'none',
+                        }}>
                         <span style={{ fontSize: '20px' }}>{b.icon}</span>
                         <span style={{ fontSize: '10px', color: '#666' }}>Rarity {b.rarity}</span>
                         {hoveredBadge === i && (
@@ -475,7 +492,14 @@ export default function ProfilePage() {
                       const isEquipped = form.equipped_title === t.value
                       return (
                         <div key={i} onClick={() => setForm(f => ({ ...f, equipped_title: isEquipped ? null : t.value }))}
-                          style={{ background: isEquipped ? (RARITY_COLOR[t.rarity] || '#4CAF50') + '33' : (RARITY_COLOR[t.rarity] || '#4CAF50') + '11', border: `1px solid ${isEquipped ? (RARITY_COLOR[t.rarity] || '#4CAF50') : (RARITY_COLOR[t.rarity] || '#4CAF50') + '55'}`, borderRadius: '99px', padding: '4px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all .2s' }}>
+                          style={{
+                            background: isEquipped ? (RARITY_COLOR[t.rarity] || '#4CAF50') + '33' : (RARITY_COLOR[t.rarity] || '#4CAF50') + '11',
+                            border: `1px solid ${isEquipped ? (RARITY_COLOR[t.rarity] || '#4CAF50') : (RARITY_COLOR[t.rarity] || '#4CAF50') + '55'}`,
+                            borderRadius: '99px', padding: '4px 12px',
+                            display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all .2s',
+                            animation: isPremium ? 'premiumGlow 2s ease-in-out infinite' : 'none',
+                            boxShadow: isPremium ? `0 0 6px ${RARITY_COLOR[t.rarity] || '#4CAF50'}88` : 'none',
+                          }}>
                           {isEquipped && <span style={{ fontSize: '10px' }}>✅</span>}
                           <span style={{ fontSize: '12px', fontWeight: isEquipped ? 600 : 400, color: RARITY_COLOR[t.rarity] || '#4CAF50' }}>{t.value}</span>
                           <span style={{ fontSize: '10px', color: RARITY_COLOR[t.rarity] || '#4CAF50', opacity: 0.8 }}>{t.rarity}</span>

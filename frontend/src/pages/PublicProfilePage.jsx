@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
+import { getPlanIcon, getPlanGlow, getPlanBorderColor } from '../utils/planBadge'
 
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
@@ -12,18 +13,25 @@ const BADGE_DESC = {
   '💀': 'マスターレベルを証明するバッジ',
 }
 
-function Avatar({ seed, avatarUrl, size = 80 }) {
+function Avatar({ seed, avatarUrl, size = 80, plan }) {
+  const glow = getPlanGlow(plan)
+  const borderColor = getPlanBorderColor(plan)
+  const style = {
+    borderRadius: '50%',
+    border: `3px solid ${borderColor}`,
+    objectFit: 'cover',
+    flexShrink: 0,
+    boxShadow: glow || 'none',
+  }
   if (avatarUrl) {
-    return <img src={avatarUrl} width={size} height={size} style={{ borderRadius: '50%', border: '3px solid #667eea', objectFit: 'cover', flexShrink: 0 }} />
+    return <img src={avatarUrl} width={size} height={size} style={style} />
   }
   const icons = ['🌻', '🌸', '🌺', '🌹', '🌼', '🌷', '🍀', '🌈', '⭐', '🎀']
   const bgColors = ['#1a1a2e', '#1a160a', '#0f1a1a', '#1a0f1a', '#0f0f1a', '#1a1a0f']
   const idx = Math.abs((seed || 'user').split('').reduce((a, c) => a + c.charCodeAt(0), 0))
-  const icon = icons[idx % icons.length]
-  const bg = bgColors[idx % bgColors.length]
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', border: '3px solid #667eea', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5, flexShrink: 0 }}>
-      {icon}
+    <div style={{ width: size, height: size, ...style, background: bgColors[idx % bgColors.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5 }}>
+      {icons[idx % icons.length]}
     </div>
   )
 }
@@ -98,6 +106,10 @@ export default function PublicProfilePage() {
   const badges = Array.isArray(targetProfile.badges) ? targetProfile.badges : []
   const titles = Array.isArray(targetProfile.titles) ? targetProfile.titles : []
   const isMe = myProfile?.id === user_id
+  const planIcon = getPlanIcon(targetProfile.plan)
+  const planGlow = getPlanGlow(targetProfile.plan)
+  const planBorder = getPlanBorderColor(targetProfile.plan)
+  const isPremium = targetProfile.plan === 'premium'
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' }}>
@@ -113,15 +125,27 @@ export default function PublicProfilePage() {
           </div>
         )}
 
-        <div style={{ background: '#0f0f1a', border: '1px solid #2a2a3e', borderRadius: '16px', padding: '2rem', marginBottom: '1rem' }}>
+        <div style={{ background: '#0f0f1a', border: `1px solid ${planBorder}`, borderRadius: '16px', padding: '2rem', marginBottom: '1rem', boxShadow: planGlow || 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
-            <Avatar seed={targetProfile.username || 'user'} avatarUrl={targetProfile.avatar_url} size={80} />
+            <Avatar seed={targetProfile.username || 'user'} avatarUrl={targetProfile.avatar_url} size={80} plan={targetProfile.plan} />
             <div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 700 }}>{targetProfile.username}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700 }}>{targetProfile.username}</div>
+                {planIcon && <span style={{ fontSize: '1.2rem' }}>{planIcon}</span>}
+              </div>
               <div style={{ fontSize: '14px', color: '#B4965A', marginTop: '4px' }}>{jobClass?.icon} {title}</div>
               {targetProfile.equipped_title && (
                 <div style={{ marginTop: '6px' }}>
-                  <span style={{ fontSize: '12px', background: '#ff990022', border: '1px solid #ff9900', borderRadius: '99px', padding: '2px 10px', color: '#ff9900' }}>🏆 {targetProfile.equipped_title}</span>
+                  <span style={{
+                    fontSize: '12px',
+                    background: isPremium ? '#ff990022' : '#1a1a2e',
+                    border: `1px solid ${isPremium ? '#ff9900' : '#333'}`,
+                    borderRadius: '99px',
+                    padding: '2px 10px',
+                    color: isPremium ? '#ff9900' : '#888',
+                    boxShadow: isPremium ? '0 0 6px #ff990066' : 'none',
+                    animation: isPremium ? 'premiumGlow 2s ease-in-out infinite' : 'none',
+                  }}>🏆 {targetProfile.equipped_title}</span>
                 </div>
               )}
             </div>
@@ -157,7 +181,15 @@ export default function PublicProfilePage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {badges.map((b, i) => (
                 <div key={i} onMouseEnter={() => setHoveredBadge(i)} onMouseLeave={() => setHoveredBadge(null)}
-                  style={{ position: 'relative', background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`, borderRadius: '10px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'default' }}>
+                  style={{
+                    position: 'relative',
+                    background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22',
+                    border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`,
+                    borderRadius: '10px', padding: '8px 14px',
+                    display: 'flex', alignItems: 'center', gap: '6px', cursor: 'default',
+                    animation: isPremium ? 'premiumGlow 2s ease-in-out infinite' : 'none',
+                    boxShadow: isPremium ? `0 0 6px ${RARITY_COLOR[b.rarity] || '#4CAF50'}88` : 'none',
+                  }}>
                   <span style={{ fontSize: '20px' }}>{b.icon}</span>
                   <span style={{ fontSize: '10px', color: '#666' }}>Rarity {b.rarity}</span>
                   {hoveredBadge === i && (
@@ -176,7 +208,14 @@ export default function PublicProfilePage() {
             <div style={{ fontSize: '12px', color: '#888', letterSpacing: '2px', marginBottom: '12px' }}>🏆 獲得称号</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {titles.map((t, i) => (
-                <div key={i} style={{ background: (RARITY_COLOR[t.rarity] || '#4CAF50') + '22', border: `1px solid ${RARITY_COLOR[t.rarity] || '#4CAF50'}55`, borderRadius: '99px', padding: '4px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div key={i} style={{
+                  background: (RARITY_COLOR[t.rarity] || '#4CAF50') + '22',
+                  border: `1px solid ${RARITY_COLOR[t.rarity] || '#4CAF50'}55`,
+                  borderRadius: '99px', padding: '4px 12px',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  animation: isPremium ? 'premiumGlow 2s ease-in-out infinite' : 'none',
+                  boxShadow: isPremium ? `0 0 6px ${RARITY_COLOR[t.rarity] || '#4CAF50'}88` : 'none',
+                }}>
                   {targetProfile.equipped_title === t.value && <span style={{ fontSize: '10px' }}>✅</span>}
                   <span style={{ fontSize: '12px', color: RARITY_COLOR[t.rarity] || '#4CAF50' }}>{t.value}</span>
                   <span style={{ fontSize: '10px', color: RARITY_COLOR[t.rarity] || '#4CAF50', opacity: 0.7 }}>{t.rarity}</span>

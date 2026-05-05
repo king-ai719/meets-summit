@@ -1,0 +1,5 @@
+@keyframes premiumGlow {
+  0%   { box-shadow: 0 0 4px #ff9900, 0 0 8px #ff990044; }
+  50%  { box-shadow: 0 0 12px #ff9900, 0 0 24px #ff990088; }
+  100% { box-shadow: 0 0 4px #ff9900, 0 0 8px #ff990044; }
+}

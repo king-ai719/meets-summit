@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
+import { getPlanIcon, getPlanGlow, getPlanBorderColor } from '../utils/planBadge'
 
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
@@ -12,15 +13,23 @@ const RARITY_COLOR = {
   S: '#ff4444', A: '#ff9900', B: '#667eea', C: '#4CAF50',
 }
 
-function Avatar({ seed, avatarUrl, size = 40 }) {
+function Avatar({ seed, avatarUrl, size = 40, plan }) {
+  const glow = getPlanGlow(plan)
+  const borderColor = getPlanBorderColor(plan)
+  const style = {
+    borderRadius: '50%',
+    border: `2px solid ${borderColor}`,
+    objectFit: 'cover',
+    boxShadow: glow || 'none',
+  }
   if (avatarUrl) {
-    return <img src={avatarUrl} width={size} height={size} style={{ borderRadius: '50%', border: '2px solid #667eea', objectFit: 'cover' }} />
+    return <img src={avatarUrl} width={size} height={size} style={style} />
   }
   const icons = ['🌻', '🌸', '🌺', '🌹', '🌼', '🌷', '🍀', '🌈', '⭐', '🎀']
   const bgColors = ['#1a1a2e', '#1a160a', '#0f1a1a', '#1a0f1a', '#0f0f1a', '#1a1a0f']
   const idx = Math.abs((seed || 'user').split('').reduce((a, c) => a + c.charCodeAt(0), 0))
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', border: '2px solid #667eea', background: bgColors[idx % bgColors.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5, flexShrink: 0 }}>
+    <div style={{ width: size, height: size, ...style, background: bgColors[idx % bgColors.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5, flexShrink: 0 }}>
       {icons[idx % icons.length]}
     </div>
   )
@@ -251,7 +260,6 @@ export default function GuildDetailPage() {
   return (
     <div style={s.page}>
       <div style={s.card}>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
           <button onClick={() => navigate('/guilds')} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem' }}>←</button>
           <div style={{ fontSize: '3rem' }}>{guild.icon || '⚔️'}</div>
@@ -262,27 +270,21 @@ export default function GuildDetailPage() {
         </div>
 
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-          <span style={{ background: '#1a1a2e', border: '1px solid #333', borderRadius: '99px', padding: '4px 12px', fontSize: '12px', color: '#888' }}>
-            👥 {members.length}人
-          </span>
+          <span style={{ background: '#1a1a2e', border: '1px solid #333', borderRadius: '99px', padding: '4px 12px', fontSize: '12px', color: '#888' }}>👥 {members.length}人</span>
           {guild.guild_type && (
             <span style={{ background: '#1a1a2e', border: '1px solid #333', borderRadius: '99px', padding: '4px 12px', fontSize: '12px', color: '#888' }}>
               {guild.guild_type === 'love' ? '❤️ 恋愛' : guild.guild_type === 'work' ? '💼 仕事' : guild.guild_type === 'hobby' ? '🎮 趣味' : '🌙 夜職'}
             </span>
           )}
           {isOwner && (
-            <span style={{ background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '4px 12px', fontSize: '12px', color: '#B4965A' }}>
-              🏰 ギルドマスター
-            </span>
+            <span style={{ background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '4px 12px', fontSize: '12px', color: '#B4965A' }}>🏰 ギルドマスター</span>
           )}
         </div>
 
         {user && (
           isMember ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '1.5rem' }}>
-              <div style={{ background: '#0f1a0f', border: '1px solid #1a4a1a', borderRadius: '10px', padding: '12px', textAlign: 'center', color: '#4CAF50' }}>
-                ✅ このギルドに参加済み
-              </div>
+              <div style={{ background: '#0f1a0f', border: '1px solid #1a4a1a', borderRadius: '10px', padding: '12px', textAlign: 'center', color: '#4CAF50' }}>✅ このギルドに参加済み</div>
               {!isOwner && (
                 <button onClick={handleLeave} disabled={leaving}
                   style={{ width: '100%', padding: '10px', border: '1px solid #4a1a1a', borderRadius: '10px', background: 'transparent', color: '#888', fontSize: '13px', cursor: 'pointer', transition: 'all .2s' }}
@@ -314,9 +316,7 @@ export default function GuildDetailPage() {
 
         <div style={{ display: 'flex', borderBottom: '1px solid #2a2a3e', marginBottom: '1.5rem' }}>
           <button style={s.tab(activeTab === 'quests')} onClick={() => setActiveTab('quests')}>⚔️ QUESTS</button>
-          <button style={s.tab(activeTab === 'chat')} onClick={() => setActiveTab('chat')}>
-            💬 CHAT {!hasChatAccess && isMember ? '🔒' : ''}
-          </button>
+          <button style={s.tab(activeTab === 'chat')} onClick={() => setActiveTab('chat')}>💬 CHAT {!hasChatAccess && isMember ? '🔒' : ''}</button>
           <button style={s.tab(activeTab === 'members')} onClick={() => setActiveTab('members')}>👥 MEMBERS</button>
         </div>
 
@@ -347,9 +347,7 @@ export default function GuildDetailPage() {
                           {isLocked && lockReasons.length > 0 && (
                             <div style={{ marginTop: '8px', padding: '6px 10px', background: '#0f0f1a', borderRadius: '6px', border: '1px solid #2a2a3e' }}>
                               <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px' }}>解放条件（いずれか）：</div>
-                              {lockReasons.map((reason, i) => (
-                                <div key={i} style={{ fontSize: '11px', color: '#cc3333' }}>• {reason}</div>
-                              ))}
+                              {lockReasons.map((reason, i) => <div key={i} style={{ fontSize: '11px', color: '#cc3333' }}>• {reason}</div>)}
                             </div>
                           )}
                           {isLocked && !unlockInfo && quest.unlock_condition && (
@@ -385,9 +383,7 @@ export default function GuildDetailPage() {
               <div style={{ textAlign: 'center', padding: '2rem', color: '#666', background: '#1a1a2e', borderRadius: '12px' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '8px' }}>⚔️</div>
                 <div style={{ fontWeight: 600, marginBottom: '8px', color: '#888' }}>チャット解放条件</div>
-                <div style={{ fontSize: '13px', lineHeight: '1.8' }}>
-                  このギルドのクエストをクリアすると<br />フリーチャットが解放されます
-                </div>
+                <div style={{ fontSize: '13px', lineHeight: '1.8' }}>このギルドのクエストをクリアすると<br />フリーチャットが解放されます</div>
                 <button onClick={() => setActiveTab('quests')}
                   style={{ marginTop: '16px', padding: '8px 20px', border: '1px solid #667eea', borderRadius: '8px', background: 'transparent', color: '#667eea', cursor: 'pointer', fontSize: '13px' }}>
                   クエストに挑戦する →
@@ -397,9 +393,7 @@ export default function GuildDetailPage() {
               <div>
                 <div style={{ height: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px', padding: '4px' }}>
                   {messages.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: '#666', marginTop: '2rem', fontSize: '13px' }}>
-                      まだメッセージがありません。最初の一言を送ろう！
-                    </div>
+                    <div style={{ textAlign: 'center', color: '#666', marginTop: '2rem', fontSize: '13px' }}>まだメッセージがありません。最初の一言を送ろう！</div>
                   ) : (
                     messages.map((msg, i) => {
                       const u = msg.users || {}
@@ -408,6 +402,7 @@ export default function GuildDetailPage() {
                       const title = buildTitle(u)
                       const isMsgGM = members.some(m => m.user_id === msg.user_id && m.role === 'master')
                       const msgReaction = reactions[msg.id]
+                      const msgPlanIcon = getPlanIcon(u.plan)
                       return (
                         <div key={i}
                           onMouseEnter={() => { setHoveredMsg(msg.id); fetchReaction(msg.id) }}
@@ -415,13 +410,14 @@ export default function GuildDetailPage() {
                           style={{ display: 'flex', gap: '10px', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end', position: 'relative' }}>
                           {!isMe && (
                             <div onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ cursor: u.id ? 'pointer' : 'default' }}>
-                              <Avatar seed={name} avatarUrl={u.avatar_url} size={32} />
+                              <Avatar seed={name} avatarUrl={u.avatar_url} size={32} plan={u.plan} />
                             </div>
                           )}
                           <div style={{ maxWidth: '70%' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', flexDirection: isMe ? 'row-reverse' : 'row' }}>
                               {isMsgGM && <span style={{ fontSize: '11px', background: '#1a160a', border: '1px solid #B4965A', borderRadius: '99px', padding: '1px 6px', color: '#B4965A' }}>🏰</span>}
                               <span onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ fontSize: '11px', color: '#888', cursor: u.id ? 'pointer' : 'default' }}>{name}</span>
+                              {msgPlanIcon && <span style={{ fontSize: '11px' }}>{msgPlanIcon}</span>}
                               {!isMe && <span style={{ fontSize: '11px', color: '#B4965A' }}>{title}</span>}
                             </div>
                             <div style={{ background: isMe ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#1a1a2e', border: isMe ? 'none' : '1px solid #2a2a3e', borderRadius: isMe ? '12px 12px 4px 12px' : '12px 12px 12px 4px', padding: '10px 14px', fontSize: '14px', lineHeight: '1.5', wordBreak: 'break-word' }}>
@@ -431,12 +427,8 @@ export default function GuildDetailPage() {
                               <div style={{ fontSize: '10px', color: '#555' }}>{formatTime(msg.created_at)}</div>
                               {msgReaction && (msgReaction.love_count > 0 || msgReaction.broken_count > 0) && (
                                 <div style={{ display: 'flex', gap: '4px' }}>
-                                  {msgReaction.love_count > 0 && (
-                                    <span style={{ fontSize: '11px', background: '#ff444422', border: '1px solid #ff444466', borderRadius: '99px', padding: '1px 6px', cursor: 'pointer' }} onClick={() => handleReaction(msg.id, 'love')}>❤️ {msgReaction.love_count}</span>
-                                  )}
-                                  {msgReaction.broken_count > 0 && (
-                                    <span style={{ fontSize: '11px', background: '#66666622', border: '1px solid #66666666', borderRadius: '99px', padding: '1px 6px', cursor: 'pointer' }} onClick={() => handleReaction(msg.id, 'broken')}>💔 {msgReaction.broken_count}</span>
-                                  )}
+                                  {msgReaction.love_count > 0 && <span style={{ fontSize: '11px', background: '#ff444422', border: '1px solid #ff444466', borderRadius: '99px', padding: '1px 6px', cursor: 'pointer' }} onClick={() => handleReaction(msg.id, 'love')}>❤️ {msgReaction.love_count}</span>}
+                                  {msgReaction.broken_count > 0 && <span style={{ fontSize: '11px', background: '#66666622', border: '1px solid #66666666', borderRadius: '99px', padding: '1px 6px', cursor: 'pointer' }} onClick={() => handleReaction(msg.id, 'broken')}>💔 {msgReaction.broken_count}</span>}
                                 </div>
                               )}
                             </div>
@@ -481,15 +473,20 @@ export default function GuildDetailPage() {
                 const isGM = member.role === 'master'
                 const badges = Array.isArray(u.badges) ? u.badges : []
                 const titles = Array.isArray(u.titles) ? u.titles : []
+                const planIcon = getPlanIcon(u.plan)
+                const isPremium = u.plan === 'premium'
                 return (
                   <div key={i} style={{ padding: '12px', background: '#1a1a2e', borderRadius: '10px', border: isGM ? '1px solid #B4965A55' : '1px solid transparent' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ cursor: u.id ? 'pointer' : 'default' }}>
-                        <Avatar seed={name} avatarUrl={u.avatar_url} size={44} />
+                        <Avatar seed={name} avatarUrl={u.avatar_url} size={44} plan={u.plan} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ fontWeight: 600, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: u.id ? 'pointer' : 'default' }}>
-                          {name}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div onClick={() => u.id && navigate(`/users/${u.id}`)} style={{ fontWeight: 600, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: u.id ? 'pointer' : 'default' }}>
+                            {name}
+                          </div>
+                          {planIcon && <span style={{ fontSize: '14px' }}>{planIcon}</span>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
                           <span style={{ fontSize: '14px' }}>{jobIcon}</span>
@@ -501,7 +498,14 @@ export default function GuildDetailPage() {
                     {badges.length > 0 && (
                       <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {badges.map((b, bi) => (
-                          <div key={bi} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22', border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`, borderRadius: '99px', padding: '2px 8px' }}>
+                          <div key={bi} style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            background: (RARITY_COLOR[b.rarity] || '#4CAF50') + '22',
+                            border: `1px solid ${RARITY_COLOR[b.rarity] || '#4CAF50'}`,
+                            borderRadius: '99px', padding: '2px 8px',
+                            animation: isPremium ? 'premiumGlow 2s ease-in-out infinite' : 'none',
+                            boxShadow: isPremium ? `0 0 6px ${RARITY_COLOR[b.rarity] || '#4CAF50'}88` : 'none',
+                          }}>
                             <span style={{ fontSize: '12px' }}>{b.icon}</span>
                             <span style={{ fontSize: '11px', color: RARITY_COLOR[b.rarity] || '#4CAF50' }}>{b.label}</span>
                           </div>
@@ -511,7 +515,13 @@ export default function GuildDetailPage() {
                     {titles.length > 0 && (
                       <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {titles.map((t, ti) => (
-                          <div key={ti} style={{ background: (RARITY_COLOR[t.rarity] || '#4CAF50') + '11', border: `1px solid ${RARITY_COLOR[t.rarity] || '#4CAF50'}55`, borderRadius: '99px', padding: '2px 8px' }}>
+                          <div key={ti} style={{
+                            background: (RARITY_COLOR[t.rarity] || '#4CAF50') + '11',
+                            border: `1px solid ${RARITY_COLOR[t.rarity] || '#4CAF50'}55`,
+                            borderRadius: '99px', padding: '2px 8px',
+                            animation: isPremium ? 'premiumGlow 2s ease-in-out infinite' : 'none',
+                            boxShadow: isPremium ? `0 0 6px ${RARITY_COLOR[t.rarity] || '#4CAF50'}88` : 'none',
+                          }}>
                             <span style={{ fontSize: '11px', color: RARITY_COLOR[t.rarity] || '#4CAF50' }}>🏆 {t.value}</span>
                           </div>
                         ))}
@@ -523,7 +533,6 @@ export default function GuildDetailPage() {
             )}
           </div>
         )}
-
       </div>
     </div>
   )
