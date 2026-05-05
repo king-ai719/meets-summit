@@ -91,13 +91,3 @@ export default function TermsPage() {
         <p style={s.p}>本規約は日本法に準拠し、東京地方裁判所を第一審の専属的合意管轄裁判所とします。</p>
 
         <div style={s.divider} />
-
-        <p style={{ fontSize: '12px', color: '#555', textAlign: 'center', marginTop: '2rem' }}>
-          株式会社Techno Management Service<br />
-          東京都北区赤羽1-41-5 ADAMS303<br />
-          info@tms-92.com
-        </p>
-      </div>
-    </div>
-  )
-}
