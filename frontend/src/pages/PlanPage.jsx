@@ -183,9 +183,17 @@ export default function PlanPage() {
         </div>
 
         <div style={{ marginTop: '2rem', padding: '1rem', background: '#1a1a2e', borderRadius: '10px', fontSize: '11px', color: '#666', lineHeight: 1.8 }}>
-          ※ 決済はStripeを通じて安全に処理されます。<br />
-          ※ サブスクリプションはいつでもキャンセルできます。<br />
-          ※ テスト環境では実際の決済は発生しません。
+  ※ 決済はStripeを通じて安全に処理されます。<br />
+  ※ サブスクリプションはいつでもキャンセルできます。<br /><br />
+  <span style={{ color: '#888', fontWeight: 600 }}>【特定商取引法に基づく表記】</span><br />
+  販売業者：株式会社Techno Management Service<br />
+  代表者：小松原 貴之<br />
+  所在地：東京都北区赤羽1-41-5<br />
+  連絡先：info@tms-92.com<br />
+  販売価格：各プランページ記載の通り<br />
+  支払方法：クレジットカード・Google Pay・Apple Pay（Stripe決済）<br />
+  支払時期：お申込み時に即時決済、以降毎月自動更新<br />
+  キャンセル：いつでも可能。当月分の返金は行いません。
         </div>
       </div>
     </div>
