@@ -55,6 +55,7 @@ export default function ProfilePage() {
   const [likers, setLikers] = useState([])
   const [form, setForm] = useState({
     username: '', bio: '', job_class_id: null, job_rank: null, gender: '', equipped_title: null,
+    birthday: '', // ★追加
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -87,6 +88,7 @@ export default function ProfilePage() {
             job_rank: u.job_rank || null,
             gender: u.gender || '',
             equipped_title: u.equipped_title || null,
+            birthday: u.birthday || '', // ★追加
           })
           if (u.username_changed_at) {
             const days = (Date.now() - new Date(u.username_changed_at).getTime()) / (1000 * 60 * 60 * 24)
@@ -138,14 +140,27 @@ export default function ProfilePage() {
     return `${job.rp_prefix}${RANK_MAP[form.job_rank] || ''}`
   }
 
+  // ★ handleSave に年齢チェック追加
   const handleSave = async () => {
     if (!form.username) return alert('冒険者名を入力してください')
+
+    if (!profile?.birthday) {
+      if (!form.birthday) return alert('生年月日を入力してください')
+      const age = (Date.now() - new Date(form.birthday).getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+      if (age < 18) return alert('18歳未満の方はご利用いただけません')
+    }
+
     setSaving(true)
     try {
       const res = await fetch(`${API}/api/users/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, clerk_id: user.id, email: user.primaryEmailAddress?.emailAddress }),
+        body: JSON.stringify({
+          ...form,
+          clerk_id: user.id,
+          email: user.primaryEmailAddress?.emailAddress,
+          birthday: profile?.birthday || form.birthday, // ★追加
+        }),
       })
       const data = await res.json()
       if (data.success) { setSaved(true); setTimeout(() => navigate('/guilds'), 1500) }
@@ -322,6 +337,26 @@ export default function ProfilePage() {
             </div>
 
             <div style={s.divider} />
+
+            {/* ★ 生年月日フィールド追加 */}
+            <div style={s.field}>
+              <label style={s.label}>生年月日 / Birthday</label>
+              <input
+                type="date"
+                style={{ ...s.input, colorScheme: 'dark', opacity: profile?.birthday ? 0.5 : 1 }}
+                value={form.birthday}
+                max={new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                onChange={e => {
+                  if (profile?.birthday) return
+                  setForm(f => ({ ...f, birthday: e.target.value }))
+                }}
+                disabled={!!profile?.birthday}
+              />
+              {profile?.birthday
+                ? <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>🔒 生年月日は変更できません</div>
+                : <div style={{ fontSize: '11px', color: '#888', marginTop: '6px' }}>※ 18歳未満は登録できません。登録後は変更不可です。</div>
+              }
+            </div>
 
             <div style={s.field}>
               <label style={s.label}>性別 / Gender</label>
