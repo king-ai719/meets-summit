@@ -189,7 +189,7 @@ export default function PlanPage() {
   販売業者：株式会社Techno Management Service<br />
   代表者：小松原 貴之<br />
   所在地：東京都北区赤羽1-41-5<br />
-  連絡先：info@tms-92.com<br />
+  連絡先：tms.9020@gmail.com<br />
   販売価格：各プランページ記載の通り<br />
   支払方法：クレジットカード・Google Pay・Apple Pay（Stripe決済）<br />
   支払時期：お申込み時に即時決済、以降毎月自動更新<br />
