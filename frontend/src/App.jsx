@@ -12,6 +12,7 @@ import QuestPage from './pages/QuestPage'
 import PublicProfilePage from './pages/PublicProfilePage'
 import PlanPage from './pages/PlanPage'
 import DMPage from './pages/DMPage'
+import TermsPage from './pages/TermsPage'
 import BgmButton, { useBgm } from './BgmPlayer'
 
 function BgmController({ bgm }) {
@@ -52,6 +53,7 @@ function App() {
         <Route path="/dm/:match_id" element={
           <><SignedIn><DMPage /></SignedIn><SignedOut><RedirectToSignIn /></SignedOut></>
         } />
+        <Route path="/terms" element={<TermsPage />} />
       </Routes>
     </BrowserRouter>
   )
