@@ -78,9 +78,9 @@ export default function TermsPage() {
         <h2 style={s.h2}>第9条（プライバシー）</h2>
         <p style={s.p}>
           個人情報の取り扱いについては
-          <span onClick={() => navigate('/policy')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', margin: '0 4px' }}>
-            プライバシーポリシー
-          </span>
+          <span onClick={() => window.open('https://meets-summit.pages.dev/policy.html', '_blank')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', margin: '0 4px' }}>
+  プライバシーポリシー
+</span>
           をご確認ください。
         </p>
 
