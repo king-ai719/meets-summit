@@ -76,6 +76,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState('profile')
   const [uploading, setUploading] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState(null)
+  const [showTermsModal, setShowTermsModal] = useState(false) // ★追加
 
   useEffect(() => {
     fetch(`${API}/api/job-classes`)
@@ -151,13 +152,22 @@ export default function ProfilePage() {
     return `${job.rp_prefix}${RANK_MAP[form.job_rank] || ''}`
   }
 
+  // ★ Saveボタン押したら新規ユーザーのみモーダル表示
   const handleSave = async () => {
     if (!form.username) return alert('冒険者名を入力してください')
     if (!profile?.birthday) {
       if (!form.birthday) return alert('生年月日を入力してください')
       const age = (Date.now() - new Date(form.birthday).getTime()) / (1000 * 60 * 60 * 24 * 365.25)
       if (age < 18) return alert('18歳未満の方はご利用いただけません')
+      // 新規ユーザーは規約モーダル表示
+      setShowTermsModal(true)
+      return
     }
+    // 既存ユーザーはそのまま保存
+    await doSave()
+  }
+
+  const doSave = async () => {
     setSaving(true)
     try {
       const res = await fetch(`${API}/api/users/profile`, {
@@ -214,6 +224,46 @@ export default function ProfilePage() {
 
   return (
     <div style={s.page}>
+
+      {/* ★ 利用規約モーダル */}
+      {showTermsModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: '#0f0f1a', border: '1px solid #B4965A', borderRadius: '16px', padding: '2rem', maxWidth: '480px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#B4965A', letterSpacing: '2px', textAlign: 'center' }}>⚔️ 利用規約への同意</h2>
+            <p style={{ fontSize: '13px', color: '#888', textAlign: 'center' }}>Meets Summitをご利用いただく前に、利用規約をご確認ください。</p>
+
+            <div style={{ background: '#1a1a2e', borderRadius: '10px', padding: '1rem', overflowY: 'auto', maxHeight: '40vh', fontSize: '12px', color: '#ccc', lineHeight: 1.8 }}>
+              <p style={{ fontWeight: 600, color: '#B4965A', marginBottom: '8px' }}>主な利用条件</p>
+              <p>・本サービスは18歳以上の方のみご利用いただけます。</p>
+              <p>・虚偽の情報登録、他ユーザーへの嫌がらせ、わいせつ・暴力的コンテンツの投稿は禁止です。</p>
+              <p>・有料プランはStripeを通じて決済されます。キャンセルはいつでも可能ですが当月分の返金は行いません。</p>
+              <p>・ユーザー間のトラブルについて当社は責任を負いません。</p>
+              <p>・規約違反の場合、事前通知なくアカウントを停止する場合があります。</p>
+              <p style={{ marginTop: '12px' }}>
+                詳細は
+                <span onClick={() => { setShowTermsModal(false); navigate('/terms') }} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', margin: '0 4px' }}>
+                  利用規約全文
+                </span>
+                をご確認ください。
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setShowTermsModal(false)}
+                style={{ flex: 1, padding: '12px', border: '1px solid #333', borderRadius: '10px', background: 'transparent', color: '#888', fontSize: '14px', cursor: 'pointer' }}>
+                キャンセル
+              </button>
+              <button
+                onClick={async () => { setShowTermsModal(false); await doSave() }}
+                style={{ flex: 2, padding: '12px', border: '1px solid #B4965A', borderRadius: '10px', background: '#B4965A', color: '#0a0a0f', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>
+                同意して登録する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem' }}>
           {[
