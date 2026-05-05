@@ -241,7 +241,7 @@ export default function ProfilePage() {
               <p>・規約違反の場合、事前通知なくアカウントを停止する場合があります。</p>
               <p style={{ marginTop: '12px' }}>
                 詳細は
-                <span onClick={() => { setShowTermsModal(false); navigate('/terms') }} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', margin: '0 4px' }}>
+                <span onClick={() => window.open('/terms', '_blank')} style={{ color: '#667eea', cursor: 'pointer', textDecoration: 'underline', margin: '0 4px' }}>
                   利用規約全文
                 </span>
                 をご確認ください。
