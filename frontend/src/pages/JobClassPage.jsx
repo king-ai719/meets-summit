@@ -150,8 +150,7 @@ export default function JobClassPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '24px', marginBottom: '1.5rem' }}>
             <span onClick={() => navigate('/terms')} style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>利用規約</span>
             <span onClick={() => window.open('https://meets-summit.pages.dev/policy.html', '_blank')} style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>プライバシーポリシー</span>
-            <span onClick={() => navigate('/tokushoho')} style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>特定商取引法に基づく表記</span>
-            <span onClick={() => window.open('mailto:info@tms-92.com')} style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>お問い合わせ</span>
+            <span onClick={() => window.open('mailto:tms.9020@gmail.com')} style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>お問い合わせ</span>
             <span onClick={() => navigate('/withdraw')} style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>退会</span>
           </div>
           <p style={{ textAlign: 'center', fontSize: '11px', color: '#444' }}>© 2025 株式会社Techno Management Service</p>
