@@ -17,7 +17,7 @@ export default function TermsPage() {
   return (
     <div style={s.page}>
       <div style={s.container}>
-        <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem', marginBottom: '1.5rem' }}>←</button>
+        <button onClick={() => window.close()} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem', marginBottom: '1.5rem' }}>← 閉じる</button>
 
         <h1 style={s.h1}>⚔️ 利用規約</h1>
         <p style={s.date}>制定日：2025年5月1日　最終更新日：2025年5月1日</p>
