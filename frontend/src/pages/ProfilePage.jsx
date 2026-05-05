@@ -5,11 +5,11 @@ import { useNavigate } from 'react-router-dom'
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 
 const RANKS = [
-  { value: 'hito', label: '〇の人' },
-  { value: 'shi', label: '〇士' },
-  { value: 'shou', label: '〇将' },
-  { value: 'ou', label: '〇王' },
-  { value: 'kou', label: '〇皇' },
+  { value: 'hito', label: '〇の人', desc: 'アルバイト・パート' },
+  { value: 'shi', label: '〇士', desc: '平社員' },
+  { value: 'shou', label: '〇将', desc: '役職者・管理職' },
+  { value: 'ou', label: '〇王', desc: '役員' },
+  { value: 'kou', label: '〇皇', desc: '社長・会長' },
 ]
 const GENDERS = [
   { value: 'male', label: '男性' },
@@ -55,12 +55,13 @@ export default function ProfilePage() {
   const [likers, setLikers] = useState([])
   const [form, setForm] = useState({
     username: '', bio: '', job_class_id: null, job_rank: null, gender: '', equipped_title: null,
-    birthday: '', // ★追加
+    birthday: '',
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [hoveredBadge, setHoveredBadge] = useState(null)
+  const [hoveredRank, setHoveredRank] = useState(null) // ★追加
   const [usernameChangeDaysLeft, setUsernameChangeDaysLeft] = useState(null)
   const [tab, setTab] = useState('profile')
   const [uploading, setUploading] = useState(false)
@@ -88,7 +89,7 @@ export default function ProfilePage() {
             job_rank: u.job_rank || null,
             gender: u.gender || '',
             equipped_title: u.equipped_title || null,
-            birthday: u.birthday || '', // ★追加
+            birthday: u.birthday || '',
           })
           if (u.username_changed_at) {
             const days = (Date.now() - new Date(u.username_changed_at).getTime()) / (1000 * 60 * 60 * 24)
@@ -140,16 +141,13 @@ export default function ProfilePage() {
     return `${job.rp_prefix}${RANK_MAP[form.job_rank] || ''}`
   }
 
-  // ★ handleSave に年齢チェック追加
   const handleSave = async () => {
     if (!form.username) return alert('冒険者名を入力してください')
-
     if (!profile?.birthday) {
       if (!form.birthday) return alert('生年月日を入力してください')
       const age = (Date.now() - new Date(form.birthday).getTime()) / (1000 * 60 * 60 * 24 * 365.25)
       if (age < 18) return alert('18歳未満の方はご利用いただけません')
     }
-
     setSaving(true)
     try {
       const res = await fetch(`${API}/api/users/profile`, {
@@ -159,7 +157,7 @@ export default function ProfilePage() {
           ...form,
           clerk_id: user.id,
           email: user.primaryEmailAddress?.emailAddress,
-          birthday: profile?.birthday || form.birthday, // ★追加
+          birthday: profile?.birthday || form.birthday,
         }),
       })
       const data = await res.json()
@@ -179,6 +177,7 @@ export default function ProfilePage() {
   const badges = profile?.badges || []
   const canUpload = PLAN_CAN_UPLOAD.includes(profile?.plan)
   const canSeeLikers = PLAN_CAN_SEE_LIKERS.includes(profile?.plan)
+  const genderLocked = !!profile?.gender // ★登録済みなら変更不可
 
   const s = {
     page: { minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' },
@@ -191,9 +190,9 @@ export default function ProfilePage() {
     classGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' },
     classCard: (selected) => ({ cursor: 'pointer', border: `1px solid ${selected ? '#B4965A' : '#2a2a3e'}`, borderRadius: '10px', padding: '12px 8px', textAlign: 'center', background: selected ? '#1a160a' : '#1a1a2e', transition: 'all .2s' }),
     rankGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' },
-    rankBtn: (selected) => ({ cursor: 'pointer', border: `1px solid ${selected ? '#B4965A' : '#2a2a3e'}`, borderRadius: '8px', padding: '10px 4px', textAlign: 'center', background: selected ? '#1a160a' : '#1a1a2e', transition: 'all .2s' }),
+    rankBtn: (selected) => ({ cursor: 'pointer', border: `1px solid ${selected ? '#B4965A' : '#2a2a3e'}`, borderRadius: '8px', padding: '10px 4px', textAlign: 'center', background: selected ? '#1a160a' : '#1a1a2e', transition: 'all .2s', position: 'relative' }),
     genderRow: { display: 'flex', gap: '10px' },
-    genderBtn: (selected) => ({ flex: 1, cursor: 'pointer', border: `1px solid ${selected ? '#B4965A' : '#2a2a3e'}`, borderRadius: '8px', padding: '10px', textAlign: 'center', background: selected ? '#1a160a' : '#1a1a2e', color: selected ? '#B4965A' : 'white', fontSize: '13px', transition: 'all .2s' }),
+    genderBtn: (selected, locked) => ({ flex: 1, cursor: locked ? 'default' : 'pointer', border: `1px solid ${selected ? '#B4965A' : '#2a2a3e'}`, borderRadius: '8px', padding: '10px', textAlign: 'center', background: selected ? '#1a160a' : '#1a1a2e', color: selected ? '#B4965A' : locked ? '#444' : 'white', fontSize: '13px', transition: 'all .2s', opacity: locked && !selected ? 0.4 : 1 }),
     saveBtn: { width: '100%', padding: '14px', border: '1px solid #B4965A', borderRadius: '10px', background: 'transparent', color: '#B4965A', fontSize: '15px', letterSpacing: '2px', cursor: 'pointer', marginTop: '0.5rem', transition: 'all .2s' },
   }
 
@@ -325,12 +324,31 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* ★ ランクにツールチップ追加 */}
             <div style={s.field}>
               <label style={s.label}>ランク / Rank</label>
               <div style={s.rankGrid}>
                 {RANKS.map(r => (
-                  <div key={r.value} style={s.rankBtn(form.job_rank === r.value)} onClick={() => setForm(f => ({ ...f, job_rank: r.value }))}>
+                  <div key={r.value}
+                    style={s.rankBtn(form.job_rank === r.value)}
+                    onClick={() => setForm(f => ({ ...f, job_rank: r.value }))}
+                    onMouseEnter={() => setHoveredRank(r.value)}
+                    onMouseLeave={() => setHoveredRank(null)}
+                    onTouchStart={() => setHoveredRank(r.value)}
+                    onTouchEnd={() => setTimeout(() => setHoveredRank(null), 1500)}
+                  >
                     <div style={{ fontSize: '13px', fontWeight: 600, color: form.job_rank === r.value ? '#B4965A' : 'white' }}>{r.label}</div>
+                    {hoveredRank === r.value && (
+                      <div style={{
+                        position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)',
+                        background: '#0f0f1a', border: '1px solid #B4965A', borderRadius: '8px',
+                        padding: '6px 10px', fontSize: '11px', color: '#B4965A',
+                        whiteSpace: 'nowrap', zIndex: 10, pointerEvents: 'none',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                      }}>
+                        {r.desc}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -338,7 +356,6 @@ export default function ProfilePage() {
 
             <div style={s.divider} />
 
-            {/* ★ 生年月日フィールド追加 */}
             <div style={s.field}>
               <label style={s.label}>生年月日 / Birthday</label>
               <input
@@ -358,13 +375,22 @@ export default function ProfilePage() {
               }
             </div>
 
+            {/* ★ 性別変更不可対応 */}
             <div style={s.field}>
               <label style={s.label}>性別 / Gender</label>
               <div style={s.genderRow}>
                 {GENDERS.map(g => (
-                  <div key={g.value} style={s.genderBtn(form.gender === g.value)} onClick={() => setForm(f => ({ ...f, gender: g.value }))}>{g.label}</div>
+                  <div key={g.value}
+                    style={s.genderBtn(form.gender === g.value, genderLocked)}
+                    onClick={() => { if (!genderLocked) setForm(f => ({ ...f, gender: g.value })) }}>
+                    {g.label}
+                  </div>
                 ))}
               </div>
+              {genderLocked
+                ? <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>🔒 性別は変更できません</div>
+                : <div style={{ fontSize: '11px', color: '#888', marginTop: '6px' }}>※ 登録後は変更不可です。</div>
+              }
             </div>
 
             {canSeeLikers && (
