@@ -13,6 +13,8 @@ import PublicProfilePage from './pages/PublicProfilePage'
 import PlanPage from './pages/PlanPage'
 import DMPage from './pages/DMPage'
 import TermsPage from './pages/TermsPage'
+import TokushohoPage from './pages/TokushohoPage'
+import WithdrawPage from './pages/WithdrawPage'
 import BgmButton, { useBgm } from './BgmPlayer'
 
 function BgmController({ bgm }) {
@@ -54,6 +56,10 @@ function App() {
           <><SignedIn><DMPage /></SignedIn><SignedOut><RedirectToSignIn /></SignedOut></>
         } />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/tokushoho" element={<TokushohoPage />} />
+        <Route path="/withdraw" element={
+          <><SignedIn><WithdrawPage /></SignedIn><SignedOut><RedirectToSignIn /></SignedOut></>
+        } />
       </Routes>
     </BrowserRouter>
   )
