@@ -24,6 +24,7 @@ export default function PlanPage() {
   const [plans, setPlans] = useState([])
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [changingPlanId, setChangingPlanId] = useState(null)
 
   useEffect(() => {
     fetch(`${API}/api/stripe/plans`)
@@ -41,6 +42,35 @@ export default function PlanPage() {
   const handleSubscribe = async (plan) => {
     if (!profile) return alert('先にプロフィールを設定してください')
     if (plan.id === 'free') return
+
+    const hasActivePlan = profile.plan && profile.plan !== 'free' && profile.stripe_subscription_id
+
+    // 既存サブスクあり → プラン変更API
+    if (hasActivePlan) {
+      if (!window.confirm(`プランを「${plan.name}」に変更しますか？\n差額は即時請求されます。`)) return
+      setChangingPlanId(plan.id)
+      try {
+        const res = await fetch(`${API}/api/stripe/change-plan`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: profile.id, price_id: plan.price_id }),
+        })
+        const data = await res.json()
+        if (data.success) {
+          alert(`プランを「${plan.name}」に変更しました！`)
+          // プロフィール再取得
+          const r = await fetch(`${API}/api/users?clerk_id=${user.id}`)
+          const d = await r.json()
+          if (d.data?.[0]) setProfile(d.data[0])
+        } else {
+          alert('エラー：' + data.error)
+        }
+      } catch { alert('通信エラー') }
+      finally { setChangingPlanId(null) }
+      return
+    }
+
+    // 新規契約 → Checkout Session
     setLoading(true)
     try {
       const res = await fetch(`${API}/api/stripe/checkout`, {
@@ -64,6 +94,7 @@ export default function PlanPage() {
   }
 
   const currentPlan = profile?.plan || 'free'
+  const hasSubscription = profile?.stripe_subscription_id
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', padding: '2rem' }}>
@@ -84,6 +115,11 @@ export default function PlanPage() {
               {currentPlan === 'free' ? '無料' : currentPlan === 'light' ? 'ライト' : currentPlan === 'standard' ? 'スタンダード' : 'プレミアム'}
             </div>
           </div>
+          {hasSubscription && (
+            <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#555' }}>
+              サブスク契約中
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
@@ -92,6 +128,10 @@ export default function PlanPage() {
             const color = PLAN_COLORS[plan.id]
             const isPremium = plan.id === 'premium'
             const isStandard = plan.id === 'standard'
+            const isChanging = changingPlanId === plan.id
+            const isFree = plan.id === 'free'
+            const isDowngrade = !isFree && plans.findIndex(p => p.id === plan.id) < plans.findIndex(p => p.id === currentPlan)
+
             return (
               <div key={plan.id} style={{
                 background: isCurrent ? color + '11' : '#0f0f1a',
@@ -101,7 +141,6 @@ export default function PlanPage() {
                 position: 'relative',
                 boxShadow: isPremium ? `0 0 20px ${color}44` : isStandard ? `0 0 10px ${color}22` : 'none',
               }}>
-                {/* おすすめバッジ（standard） */}
                 {isStandard && (
                   <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: '#667eea', color: 'white', fontSize: '11px', fontWeight: 700, padding: '2px 12px', borderRadius: '99px', whiteSpace: 'nowrap' }}>
                     おすすめ
@@ -120,26 +159,18 @@ export default function PlanPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ color: '#4CAF50' }}>✓</span>
-                    <span style={{ color: '#ccc' }}>
-                      いいね {plan.likes_per_day === -1 ? '無制限' : `${plan.likes_per_day}回/日`}
-                    </span>
+                    <span style={{ color: '#ccc' }}>いいね {plan.likes_per_day === -1 ? '無制限' : `${plan.likes_per_day}回/日`}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ color: '#4CAF50' }}>✓</span>
-                    <span style={{ color: '#ccc' }}>
-                      クエスト {plan.quest_per_day === -1 ? '無制限' : `${plan.quest_per_day}回/日`}
-                    </span>
+                    <span style={{ color: '#ccc' }}>クエスト {plan.quest_per_day === -1 ? '無制限' : `${plan.quest_per_day}回/日`}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: plan.can_upload_photo ? '#4CAF50' : '#555' }}>
-                      {plan.can_upload_photo ? '✓' : '✗'}
-                    </span>
+                    <span style={{ color: plan.can_upload_photo ? '#4CAF50' : '#555' }}>{plan.can_upload_photo ? '✓' : '✗'}</span>
                     <span style={{ color: plan.can_upload_photo ? '#ccc' : '#555' }}>写真アップロード</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: plan.can_see_likers ? '#4CAF50' : '#555' }}>
-                      {plan.can_see_likers ? '✓' : '✗'}
-                    </span>
+                    <span style={{ color: plan.can_see_likers ? '#4CAF50' : '#555' }}>{plan.can_see_likers ? '✓' : '✗'}</span>
                     <span style={{ color: plan.can_see_likers ? '#ccc' : '#555' }}>いいね確認</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -158,23 +189,24 @@ export default function PlanPage() {
                   <div style={{ textAlign: 'center', fontSize: '12px', color, padding: '8px', border: `1px solid ${color}`, borderRadius: '8px' }}>
                     現在のプラン
                   </div>
-                ) : plan.id === 'free' ? (
+                ) : isFree ? (
                   <div style={{ textAlign: 'center', fontSize: '12px', color: '#555', padding: '8px' }}>
-                    ダウングレード
+                    {hasSubscription ? 'Stripeで解約' : 'ダウングレード'}
                   </div>
                 ) : (
                   <button
                     onClick={() => handleSubscribe(plan)}
-                    disabled={loading}
+                    disabled={loading || isChanging}
                     style={{
                       padding: '10px', border: `1px solid ${color}`,
                       borderRadius: '8px', background: 'transparent',
-                      color, fontSize: '13px', cursor: 'pointer',
+                      color, fontSize: '13px', cursor: (loading || isChanging) ? 'not-allowed' : 'pointer',
                       transition: 'all .2s', fontWeight: 600,
+                      opacity: (loading || isChanging) ? 0.6 : 1,
                     }}
-                    onMouseOver={e => { e.currentTarget.style.background = color; e.currentTarget.style.color = '#0a0a0f' }}
+                    onMouseOver={e => { if (!loading && !isChanging) { e.currentTarget.style.background = color; e.currentTarget.style.color = '#0a0a0f' } }}
                     onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = color }}>
-                    {loading ? '処理中...' : 'このプランに変更'}
+                    {isChanging ? '変更中...' : hasSubscription ? (isDowngrade ? 'ダウングレード' : 'アップグレード') : 'このプランに変更'}
                   </button>
                 )}
               </div>
@@ -183,17 +215,18 @@ export default function PlanPage() {
         </div>
 
         <div style={{ marginTop: '2rem', padding: '1rem', background: '#1a1a2e', borderRadius: '10px', fontSize: '11px', color: '#666', lineHeight: 1.8 }}>
-  ※ 決済はStripeを通じて安全に処理されます。<br />
-  ※ サブスクリプションはいつでもキャンセルできます。<br /><br />
-  <span style={{ color: '#888', fontWeight: 600 }}>【特定商取引法に基づく表記】</span><br />
-  販売業者：株式会社Techno Management Service<br />
-  代表者：小松原 貴之<br />
-  所在地：東京都北区赤羽1-41-5<br />
-  連絡先：tms.9020@gmail.com<br />
-  販売価格：各プランページ記載の通り<br />
-  支払方法：クレジットカード・Google Pay・Apple Pay（Stripe決済）<br />
-  支払時期：お申込み時に即時決済、以降毎月自動更新<br />
-  キャンセル：いつでも可能。当月分の返金は行いません。
+          ※ 決済はStripeを通じて安全に処理されます。<br />
+          ※ サブスクリプションはいつでもキャンセルできます。<br />
+          ※ プラン変更時の差額は即時請求されます。<br /><br />
+          <span style={{ color: '#888', fontWeight: 600 }}>【特定商取引法に基づく表記】</span><br />
+          販売業者：株式会社Techno Management Service<br />
+          代表者：小松原 貴之<br />
+          所在地：東京都北区赤羽1-41-5<br />
+          連絡先：tms.9020@gmail.com<br />
+          販売価格：各プランページ記載の通り<br />
+          支払方法：クレジットカード・Google Pay・Apple Pay（Stripe決済）<br />
+          支払時期：お申込み時に即時決済、以降毎月自動更新<br />
+          キャンセル：いつでも可能。当月分の返金は行いません。
         </div>
       </div>
     </div>

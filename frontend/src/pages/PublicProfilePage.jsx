@@ -50,6 +50,8 @@ export default function PublicProfilePage() {
   const [limitError, setLimitError] = useState(null)
   const [remaining, setRemaining] = useState(null)
   const [matchNotice, setMatchNotice] = useState(false)
+  const [isBlocked, setIsBlocked] = useState(false)
+  const [blocking, setBlocking] = useState(false)
 
   useEffect(() => {
     fetch(`${API}/api/users/${user_id}/profile`)
@@ -69,6 +71,11 @@ export default function PublicProfilePage() {
     fetch(`${API}/api/profile-likes?to_user_id=${user_id}&from_user_id=${myProfile.id}`)
       .then(res => res.json())
       .then(data => { if (data.success) setLikes(data) })
+    fetch(`${API}/api/blocks?user_id=${myProfile.id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setIsBlocked(data.data.includes(user_id))
+      })
   }, [user_id, myProfile])
 
   const handleLike = async (type) => {
@@ -92,6 +99,26 @@ export default function PublicProfilePage() {
       if (data.success) setLikes(data)
     } catch { }
     finally { setLiking(false) }
+  }
+
+  const handleBlock = async () => {
+    if (!myProfile || blocking) return
+    const action = isBlocked ? 'ブロックを解除' : 'ブロック'
+    if (!window.confirm(`${targetProfile?.username}を${action}しますか？`)) return
+    setBlocking(true)
+    try {
+      const res = await fetch(`${API}/api/blocks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blocker_id: myProfile.id, blocked_id: user_id }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setIsBlocked(data.action === 'blocked')
+        if (data.action === 'blocked') navigate(-1)
+      }
+    } catch { }
+    finally { setBlocking(false) }
   }
 
   if (loading) return (
@@ -125,7 +152,29 @@ export default function PublicProfilePage() {
           </div>
         )}
 
-        <div style={{ background: '#0f0f1a', border: `1px solid ${planBorder}`, borderRadius: '16px', padding: '2rem', marginBottom: '1rem', boxShadow: planGlow || 'none' }}>
+        <div style={{ background: '#0f0f1a', border: `1px solid ${planBorder}`, borderRadius: '16px', padding: '2rem', marginBottom: '1rem', boxShadow: planGlow || 'none', position: 'relative' }}>
+
+          {/* ブロックボタン：右上 */}
+          {!isMe && user && (
+            <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
+              <button
+                onClick={handleBlock}
+                disabled={blocking}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: isBlocked ? '#888' : '#555',
+                  fontSize: '12px',
+                  cursor: blocking ? 'not-allowed' : 'pointer',
+                  textDecoration: 'underline',
+                  padding: '4px 8px',
+                  opacity: blocking ? 0.5 : 1,
+                }}>
+                {blocking ? '処理中...' : isBlocked ? '🔓 解除' : '🚫 ブロック'}
+              </button>
+            </div>
+          )}
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
             <Avatar seed={targetProfile.username || 'user'} avatarUrl={targetProfile.avatar_url} size={80} plan={targetProfile.plan} />
             <div>

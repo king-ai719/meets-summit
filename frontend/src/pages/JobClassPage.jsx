@@ -22,22 +22,171 @@ function Avatar({ seed, size = 60, badge = null }) {
   )
 }
 
-const RANK_LABELS = {
-  kou: '皇', ou: '王', shou: '将', shi: '士', hito: 'の人'
+const RANK_LABELS = { kou: '皇', ou: '王', shou: '将', shi: '士', hito: 'の人' }
+
+const STEPS = [
+  {
+    icon: '⚔️',
+    title: 'ようこそ、Meets Summitへ！',
+    desc: 'クイズRPG × マッチングアプリ。\n職業クイズで腕試しして、同じ業界の仲間と出会おう！',
+    btn: '次へ →',
+  },
+  {
+    icon: '🧠',
+    title: 'まずはクイズを体験！',
+    desc: '登録不要で今すぐ試せる！\n好きな職業を選んで、3問のクイズに挑戦してみよう。',
+    btn: 'クイズを試してみる ⚔️',
+  },
+]
+
+function TutorialPopup({ jobClasses, onClose }) {
+  const navigate = useNavigate()
+  const [step, setStep] = useState(0)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    setTimeout(() => setVisible(true), 300)
+  }, [])
+
+  const handleClose = () => {
+    setVisible(false)
+    setTimeout(() => {
+      localStorage.setItem('tutorial_dismissed', '1')
+      onClose()
+    }, 400)
+  }
+
+  const handleBtn = () => {
+    if (step === 0) {
+      setStep(1)
+      return
+    }
+    // ランダムな職業に飛ばす
+    if (jobClasses.length > 0) {
+      const random = jobClasses[Math.floor(Math.random() * jobClasses.length)]
+      localStorage.setItem('tutorial_dismissed', '1')
+      onClose()
+      navigate(`/guest-quest/${random.id}`)
+    }
+  }
+
+  const current = STEPS[step]
+
+  return (
+    <>
+      {/* オーバーレイ（薄め） */}
+      <div
+        onClick={handleClose}
+        style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          zIndex: 98, opacity: visible ? 1 : 0, transition: 'opacity 0.4s',
+        }}
+      />
+
+      {/* カード */}
+      <div style={{
+        position: 'fixed',
+        bottom: visible ? '2rem' : '-300px',
+        right: '2rem',
+        width: '320px',
+        background: 'linear-gradient(135deg, #0f0f1a, #1a1a2e)',
+        border: '1px solid #667eea88',
+        borderRadius: '20px',
+        padding: '1.8rem',
+        zIndex: 99,
+        boxShadow: '0 8px 40px rgba(102,126,234,0.3)',
+        transition: 'bottom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+      }}>
+        {/* 閉じるボタン */}
+        <button
+          onClick={handleClose}
+          style={{
+            position: 'absolute', top: '12px', right: '16px',
+            background: 'none', border: 'none', color: '#666',
+            fontSize: '18px', cursor: 'pointer', lineHeight: 1,
+          }}>×</button>
+
+        {/* ステップインジケーター */}
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '1.2rem' }}>
+          {STEPS.map((_, i) => (
+            <div key={i} style={{
+              height: '3px', flex: 1, borderRadius: '99px',
+              background: i <= step ? '#667eea' : '#2a2a3e',
+              transition: 'background 0.3s',
+            }} />
+          ))}
+        </div>
+
+        {/* アイコン */}
+        <div style={{ fontSize: '2.5rem', marginBottom: '0.8rem', textAlign: 'center' }}>
+          {current.icon}
+        </div>
+
+        {/* タイトル */}
+        <div style={{
+          fontSize: '1rem', fontWeight: 700, color: '#fff',
+          marginBottom: '0.6rem', textAlign: 'center', lineHeight: 1.4,
+        }}>
+          {current.title}
+        </div>
+
+        {/* 説明 */}
+        <div style={{
+          fontSize: '13px', color: '#aaa', lineHeight: 1.7,
+          textAlign: 'center', marginBottom: '1.4rem', whiteSpace: 'pre-line',
+        }}>
+          {current.desc}
+        </div>
+
+        {/* ボタン */}
+        <button
+          onClick={handleBtn}
+          style={{
+            width: '100%', padding: '12px',
+            background: 'linear-gradient(135deg, #667eea, #764ba2)',
+            border: 'none', borderRadius: '10px',
+            color: 'white', fontSize: '14px', fontWeight: 700,
+            cursor: 'pointer', transition: 'opacity 0.2s',
+          }}
+          onMouseOver={e => e.currentTarget.style.opacity = '0.85'}
+          onMouseOut={e => e.currentTarget.style.opacity = '1'}>
+          {current.btn}
+        </button>
+
+        {/* スキップ */}
+        <div style={{ textAlign: 'center', marginTop: '10px' }}>
+          <span
+            onClick={handleClose}
+            style={{ fontSize: '12px', color: '#555', cursor: 'pointer', textDecoration: 'underline' }}>
+            スキップ
+          </span>
+        </div>
+      </div>
+    </>
+  )
 }
 
 export default function JobClassPage() {
   const [jobClasses, setJobClasses] = useState([])
   const [profile, setProfile] = useState(null)
   const [myGuilds, setMyGuilds] = useState([])
+  const [showTutorial, setShowTutorial] = useState(false)
   const navigate = useNavigate()
-  const { user } = useUser()
+  const { user, isLoaded } = useUser()
 
   useEffect(() => {
     fetch(`${API}/api/job-classes`)
       .then(res => res.json())
       .then(data => setJobClasses(Array.isArray(data.data) ? data.data : []))
   }, [])
+
+  // 未ログインかつ未dismissed → チュートリアル表示
+  useEffect(() => {
+    if (!isLoaded) return
+    if (!user && !localStorage.getItem('tutorial_dismissed')) {
+      setShowTutorial(true)
+    }
+  }, [isLoaded, user])
 
   useEffect(() => {
     if (!user) return
@@ -63,8 +212,7 @@ export default function JobClassPage() {
       const womRanks = { kou: '夜皇姫', ou: '夜王妃', shou: '夜将姫', shi: '夜士女', hito: '夜の人' }
       return womRanks[profile.job_rank] || '冒険者'
     }
-    const rank = RANK_LABELS[profile.job_rank] || ''
-    return `${job.rp_prefix}${rank}`
+    return `${job.rp_prefix}${RANK_LABELS[profile.job_rank] || ''}`
   }
 
   const getBadge = () => {
@@ -76,6 +224,14 @@ export default function JobClassPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f', color: 'white', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
+
+      {showTutorial && (
+        <TutorialPopup
+          jobClasses={jobClasses}
+          onClose={() => setShowTutorial(false)}
+        />
+      )}
+
       <div style={{ flex: 1, padding: '2rem' }}>
         <h1 style={{ textAlign: 'center', fontSize: '3rem', background: 'linear-gradient(135deg, #667eea, #764ba2)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           Meets Summit - ミーツサミット
@@ -144,16 +300,15 @@ export default function JobClassPage() {
         </div>
       </div>
 
-      {/* ★ フッター */}
       <footer style={{ borderTop: '1px solid #1e1e2e', padding: '2rem', marginTop: '4rem' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '24px', marginBottom: '1.5rem' }}>
             <span onClick={() => navigate('/terms')} style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>利用規約</span>
             <span onClick={() => window.open('https://meets-summit.pages.dev/policy.html', '_blank')} style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>プライバシーポリシー</span>
-            <span onClick={() => window.open('mailto:tms.9020@gmail.com')} style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>お問い合わせ</span>
+            <span onClick={() => window.open('mailto:info@tms-92.com')} style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>お問い合わせ</span>
             <span onClick={() => navigate('/withdraw')} style={{ fontSize: '12px', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}>退会</span>
           </div>
-          <p style={{ textAlign: 'center', fontSize: '11px', color: '#444' }}>© 2025 株式会社Techno Management Service</p>
+          <p style={{ textAlign: 'center', fontSize: '11px', color: '#444' }}>© 2026 株式会社Techno Management Service</p>
         </div>
       </footer>
     </div>

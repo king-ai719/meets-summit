@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { SignInButton } from '@clerk/clerk-react'
 
@@ -12,7 +12,7 @@ const LOADING_MESSAGE = {
 
 const RARITY_COLOR = { S: '#ff4444', A: '#ff9900', B: '#667eea', C: '#4CAF50' }
 
-export default function GuestQuestPage() {
+export default function GuestQuestPage({ bgm }) {
   const { job_class_id } = useParams()
   const [searchParams] = useSearchParams()
   const difficulty = searchParams.get('difficulty') || 'normal'
@@ -25,12 +25,12 @@ export default function GuestQuestPage() {
   const [phase, setPhase] = useState('loading')
   const [score, setScore] = useState(0)
   const [job, setJob] = useState(null)
+  const gameoverAudioRef = useRef(null)
 
   const questionCount = difficulty === 'very_hard' ? 5 : 3
   const loadingMsg = LOADING_MESSAGE[difficulty] || LOADING_MESSAGE.normal
 
   useEffect(() => {
-    // 職業情報取得
     fetch(`${API}/api/job-classes`)
       .then(res => res.json())
       .then(data => {
@@ -42,9 +42,41 @@ export default function GuestQuestPage() {
 
   useEffect(() => {
     if (!job) return
-    // AI問題生成
     generateGuestQuestions()
   }, [job])
+
+  // BGM制御
+  useEffect(() => {
+    if (phase === 'playing') {
+      if (bgm) {
+        difficulty === 'very_hard' ? bgm.play('very_hard') : bgm.play('battle')
+      }
+    }
+    if (phase === 'cleared') {
+      if (bgm) bgm.play('fanfare')
+    }
+    if (phase === 'gameover') {
+      // bgmがあればgameoverを再生、なければ直接Audio
+      if (bgm) {
+        bgm.play('gameover')
+      } else {
+        const audio = new Audio('/bgm/gameover.mp3')
+        audio.volume = 0.3
+        audio.play().catch(() => {})
+        gameoverAudioRef.current = audio
+      }
+    }
+  }, [phase])
+
+  // アンマウント時にトップBGMに戻す
+  useEffect(() => {
+    return () => {
+      if (bgm) bgm.play('top')
+      if (gameoverAudioRef.current) {
+        gameoverAudioRef.current.pause()
+      }
+    }
+  }, [])
 
   const generateGuestQuestions = async () => {
     try {
@@ -141,7 +173,6 @@ export default function GuestQuestPage() {
             正解数：{score} / {questions.length}問
           </p>
 
-          {/* 登録誘導 */}
           <div style={{ background: '#1a160a', border: '1px solid #B4965A55', borderRadius: '12px', padding: '1.5rem', margin: '1.5rem 0', textAlign: 'left' }}>
             <div style={{ fontWeight: 600, color: '#B4965A', marginBottom: '8px', textAlign: 'center' }}>
               🏰 ギルドに参加してもっと楽しもう！
@@ -170,7 +201,6 @@ export default function GuestQuestPage() {
   return (
     <div style={s.page}>
       <div style={s.card}>
-        {/* ヘッダー */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem' }}>←</button>
           <div style={{ fontSize: '12px', color: '#888' }}>{job?.icon} {job?.name} ゲスト体験</div>

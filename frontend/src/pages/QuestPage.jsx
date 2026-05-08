@@ -110,7 +110,7 @@ export default function QuestPage({ bgm }) {
       }
     }
     if (phase === 'cleared') bgm.play('fanfare')
-    if (phase === 'gameover') bgm.stop()
+    if (phase === 'gameover') bgm.play('gameover')
   }, [phase, quest])
 
   useEffect(() => {

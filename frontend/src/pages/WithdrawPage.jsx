@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useUser } from '@clerk/clerk-react'
+import { useUser, useClerk } from '@clerk/clerk-react'
 import { useState, useEffect } from 'react'
 
 const API = 'https://meets-summit-api.tk-xx719.workers.dev'
@@ -7,6 +7,7 @@ const API = 'https://meets-summit-api.tk-xx719.workers.dev'
 export default function WithdrawPage() {
   const navigate = useNavigate()
   const { user } = useUser()
+  const { signOut } = useClerk()
   const [profile, setProfile] = useState(null)
   const [confirmed, setConfirmed] = useState(false)
   const [withdrawing, setWithdrawing] = useState(false)
@@ -24,17 +25,24 @@ export default function WithdrawPage() {
     if (!window.confirm('本当に退会しますか？この操作は取り消せません。')) return
     setWithdrawing(true)
     try {
-      await fetch(`${API}/api/users/withdraw`, {
+      const res = await fetch(`${API}/api/users/withdraw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: profile.id, clerk_id: user.id }),
       })
+      const data = await res.json()
+      if (!data.success) {
+        alert('退会に失敗しました: ' + (data.error || '不明なエラー'))
+        return
+      }
+      await signOut()
       alert('退会が完了しました。ご利用ありがとうございました。')
       navigate('/')
-    } catch {
+    } catch (e) {
       alert('通信エラーが発生しました')
+    } finally {
+      setWithdrawing(false)
     }
-    finally { setWithdrawing(false) }
   }
 
   return (

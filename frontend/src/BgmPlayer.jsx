@@ -5,6 +5,7 @@ const BGM = {
   battle: '/bgm/battle.mp3',
   very_hard: '/bgm/Other_World.mp3',
   fanfare: '/bgm/fanfare.mp3',
+  gameover: '/bgm/gameover.mp3',
 }
 
 export function useBgm() {
@@ -19,7 +20,6 @@ export function useBgm() {
     if (!src) return
     pendingBgm.current = key
 
-    // まだユーザー操作前なら保留
     if (!playing && currentBgm === null) return
 
     if (currentBgm !== key) {
@@ -28,7 +28,8 @@ export function useBgm() {
         audioRef.current = null
       }
       const audio = new Audio(src)
-      audio.loop = true
+      // ゲームオーバーはループしない
+      audio.loop = key !== 'gameover'
       audio.volume = muted ? 0 : 0.3
       audio.play().catch(() => {})
       audioRef.current = audio
@@ -51,7 +52,6 @@ export function useBgm() {
     setMuted(prev => !prev)
   }
 
-  // 🎵ボタンを押したときに初回再生開始
   const startBgm = () => {
     const key = pendingBgm.current || 'top'
     const src = BGM[key]
@@ -62,7 +62,7 @@ export function useBgm() {
       audioRef.current = null
     }
     const audio = new Audio(src)
-    audio.loop = true
+    audio.loop = key !== 'gameover'
     audio.volume = muted ? 0 : 0.3
     audio.play().catch(() => {})
     audioRef.current = audio
