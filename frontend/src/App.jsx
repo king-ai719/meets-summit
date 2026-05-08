@@ -24,6 +24,10 @@ function BgmController({ bgm }) {
       bgm.play('top')
     }
   }, [location.pathname])
+
+  // DMページではBGMボタンを非表示
+  if (location.pathname.startsWith('/dm/')) return null
+
   return <BgmButton bgm={bgm} />
 }
 
